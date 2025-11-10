@@ -1,8 +1,6 @@
 """Disciplinas FGV EMAp 2025.2"""
-from itertools import combinations
 
 class Disciplina:
-    lista_disciplinas = []
     def __init__(self, nome:str, horario:str, dias:list[str], periodos:list[int], curso:list=[1, 0]):
         """
         Classe Disciplina
@@ -31,50 +29,39 @@ class Disciplina:
         self.curso = curso
         self.horario = horario
         self.dias = dias
-        self.cor = None
-
-        #aqui adicionamos numa lista com todas as disciplinas criadas
-        Disciplina.lista_disciplinas.append(self)
+        self.tem_prova = True
     
     def __repr__(self):
         return f"{self.nome}"
 
-    
-    # @staticmethod
-    # def set_dias_horarios():
-    #     return {(dia, materia.horario) for materia in Disciplina.lista_disciplinas for dia in materia.dias}
-    
-    # @staticmethod
-    # def blocos_validos():
-    #     set_blocos = set([])
-    #     # aqui definimos conjuntos de matérias que acontecem nos mesmos dias e horários, como ponto de partida
-    #     for dia_e_horario in Disciplina.set_dias_horarios():
-    #         bloco = set([materia for materia in Disciplina.lista_disciplinas if dia_e_horario[0] in materia.dias and dia_e_horario[1] == materia.horario])
-    #         set_blocos.add(tuple(bloco))
-    #     return [t1 for t1 in set_blocos if not any(set(t1).issubset(set(t2)) for t2 in set_blocos if t1 != t2)]
+def restricoes_basicas(lista_disciplinas):
+    """define um dicionário com as restricoes de disciplinas que não podem ocorrer num mesmo dia"""
+    restricoes = {}
+    for i in lista_disciplinas:
+        restricoes[i] = set([])
+        for j in lista_disciplinas:
+            if j != i:
+                mesmo_periodo = (set(i.periodos) & set(j.periodos))
+                mesmo_curso = (set(i.curso) & set(j.curso))
+                if mesmo_periodo and mesmo_curso:
+                    restricoes[i].add(j)
+    return restricoes
 
-    #aqui definimos um dicionário com cada disciplina e as disciplinas que não podem ocorrer simultaneamente a ela
-    @staticmethod
-    def restricoes_basicas():
-        restricoes = {}
-        lista = Disciplina.lista_disciplinas
-        for i in lista:
-            restricoes[i] = set([])
-            for j in lista:
-                if j != i:
-                    mesmo_periodo = (set(i.periodos) & set(j.periodos))
-                    mesmo_curso = (set(i.curso) & set(j.curso))
-                    if mesmo_periodo and mesmo_curso:
-                        restricoes[i].add(j)
-        return restricoes
-   
+def restrições_adicionais(schedules_atípicos, grafo_inicial, lista_disciplinas):
+    '''adiciona restrições necessárias para cada aluno puxando disciplinas atípicas'''
+    for schedule in schedules_atípicos:
+        for i in schedule:
+            for j in schedule:
+                if i in lista_disciplinas and j in lista_disciplinas and i != j:
+                    grafo_inicial[i].add(j)
+
 ################################################################################
 # Setup Inicial
 ################################################################################
-
 semestre = 2
 
-if semestre == 2:
+if semestre == 2: #seta as disciplinas de semestres ímpares
+    CUV = Disciplina("Cálculo em uma Variável", "9h20", ["seg", "qua", "sex"], [1])
     LP = Disciplina("Linguagens de Programação", "7h30", ["seg", "qua", "sex"], [2])
     CVV = Disciplina("Cálculo em Várias Variáveis", "9h20", ["seg", "qua", "sex"], [2])
     AL = Disciplina("Algebra Linear", "11h10", ["seg", "qua", "sex"], [2])
@@ -98,25 +85,29 @@ if semestre == 2:
     EMD = Disciplina("Ética na Manipulação de Dados", "11h10", ["ter", "qui"], [8], [1])
     OC = Disciplina("Otimização Contínua", "11h10", ["seg", "qua"], [8], [0])
 
-requerimentos_profs = {AR: 1, AL : 2} #chave é a disciplina, valor é o dia. 
-
-alunos_puxando = { # set com listas de todas as disciplinas que o aluno com schedule incomum está puxando
-(AL, AR, MD, LP, CVV, AEDV, EMD ),
-(AL, AR, MD, LP, CVV, MFF),
-(AC, AR, MD, LP, CVV, AEDV)
-}
-    
 nr_dias = 7
 
-restricoes = Disciplina.restricoes_basicas()
+requerimentos_profs = {AR: 1, AL : 2} #chave é a disciplina, valor é o dia. 
 
-for schedule in alunos_puxando:
-     for i in schedule:
-          for j in schedule:
-              if i != j:
-                 restricoes[i].add(j)
+solucoes_desejadas = 5
 
+disciplinas = [LP, CVV, AL, AEDV, MFF, MD, PAA, CR, MI, IE, OCD, AR, AC, ES, AP, ST, PE, EDP, IAN, EMD, OC]
 
+alunos_puxando = { # set com listas de todas as disciplinas que o aluno com schedule incomum está puxando
+(AL, AR, MD, LP, CVV, AEDV, EMD),
+(AL, AR, MD, LP, CVV, MFF),
+(AC, AL, MD, LP, CVV, AEDV)
+}
 
-for d in restricoes:
-    print(d, ': ',restricoes[d])
+materias_dificeis = {MD, AL}
+
+################################################################################
+# Criação do Grafo
+################################################################################
+
+grafo = restricoes_basicas(disciplinas)
+restrições_adicionais(alunos_puxando, grafo, disciplinas)
+
+if __name__ == "__main__":
+    for d in grafo:
+        print(d, ': ',grafo[d])
