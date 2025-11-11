@@ -1,4 +1,4 @@
-from Disciplinas import grafo, disciplinas, nr_dias, requerimentos_profs, Disciplina, AEDV, OCD, MD, AL, materias_dificeis
+from Disciplinas import grafo, nr_dias, requerimentos_profs, Disciplina, AEDV, OCD, MD, AL, materias_dificeis
 
 ################################################################################
 # Setup Algoritmo Guloso
@@ -51,6 +51,8 @@ def primeiro_disponivel(cores_usadas, cores_disponiveis):
 def coloracao_gulosa(grafo, cores, pre_requisitos={}):
     """Find the greedy coloring of G in the given order.
     The return value is a dictionary mapping vertices to their colors.
+
+    https://en.wikipedia.org/wiki/Greedy_coloring
     """
     coloracao = pre_requisitos
     for vertice in grafo:
@@ -66,6 +68,11 @@ def coloracao_gulosa(grafo, cores, pre_requisitos={}):
         coloracao[vertice] = pd
     return coloracao
 
+# def s
+
+def coloracao_DSatur(grafo, cores, pre_requisitos={}):
+    """https://en.wikipedia.org/wiki/DSatur"""
+    proximo_vertice = list(grafo)[0]
 
 ################################################################################
 # Test Driver
@@ -73,3 +80,4 @@ def coloracao_gulosa(grafo, cores, pre_requisitos={}):
 
 coloracao = coloracao_gulosa(grafo, [1, 2, 3, 4, 5, 6, 7], requerimentos_profs )
 print(calendario_from_coloracao(coloracao))
+
