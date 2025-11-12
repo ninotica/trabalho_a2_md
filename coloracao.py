@@ -1,5 +1,5 @@
 from Disciplinas import grafo, nr_dias, requerimentos_profs, Disciplina, AEDV, OCD, MD, AL, materias_dificeis
-
+grafo = grafo.dict_format()
 ################################################################################
 # Setup Algoritmo Guloso
 ################################################################################
@@ -35,7 +35,7 @@ def ordem_de_ruindade(grafo, calendario, materias_dificeis):
         if (dia - 1) not in calendario:
             continue
         for materia in calendario[dia]:
-            if materia not in materias_dificeis:
+            if not materia.eh_dificil:
                 continue
             for vizinho in grafo[materia]:
                 if vizinho in calendario[dia - 1]:
