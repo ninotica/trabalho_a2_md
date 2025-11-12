@@ -25,10 +25,10 @@ class Vertice():
     def __repr__(self):
         return str(self.label)
     
-    # def __eq__(self, value):
-    #     if not isinstance(value, Vertice):
-    #         return NotImplemented
-    #     return self.label == value.label and self.grau == value.grau and self.cor == value.cor and self.vizinhos == value.vizinhos
+    def __eq__(self, value):
+        if not isinstance(value, Vertice):
+            return NotImplemented
+        return self.label == value.label and self.grau == value.grau and self.cor == value.cor and self.vizinhos == value.vizinhos
     
     def set_label(self, label):
         self.label = label
@@ -82,13 +82,23 @@ class Vertice():
 class Grafo():
     def __init__(self, vertices: list[Vertice], arestas: list[tuple[Vertice, Vertice]]):
         self.vertices = copy.deepcopy(vertices)
-        self.arestas = {}
+        self.arestas = {v.get_label(): [] for v in vertices}
         for v in vertices:
-            self.arestas[v] = set()
+            vertices.remove(v)
+            if vertices == [] or arestas == []:
+                break
             for u in vertices:
-                if (v, u) in arestas:
-                    self.arestas[v].add(u)
-                    v.set_grau(v.get_grau() + 1)
+                for aresta in arestas:
+                    if (v, u) == aresta or (u, v) == aresta:
+                        if not u in self.arestas[v.get_label()]:
+                            aresta[0].set_grau(aresta[0].get_grau() + 1)
+                            aresta[1].set_grau(aresta[1].get_grau() + 1)
+                            self.arestas[v.get_label()].append(u)
+                            self.arestas[u.get_label()].append(v)
+                            v.set_grau(v.get_grau() + 1)
+                            u.set_grau(u.get_grau() + 1)
+                            arestas.remove(aresta)
+                        
     
     def __str__(self):
         vertices = f'Vértices:\n{[v.__str__() for v in self.vertices]}\n\n'
@@ -106,12 +116,12 @@ class Grafo():
     def sort_vertices_grau(self):
         for i in range(len(self.vertices)):
             for j in range(i + 1, len(self.vertices)):
-                v = vertices[i]
-                u = vertices[j]
+                v = self.vertices[i]
+                u = self.vertices[j]
                 if u.get_grau() < v.get_grau():
                     temp = v
-                    vertices[i] = u
-                    vertices[j] = v
+                    self.vertices[i] = u
+                    self.vertices[j] = v
 
     def get_arestas(self):
         return self.arestas       

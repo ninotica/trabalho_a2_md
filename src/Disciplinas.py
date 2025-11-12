@@ -2,6 +2,7 @@
 import pandas as pd
 from itertools import combinations
 import os
+import algoritmos
 
 class Disciplina:
     disciplinas = []
@@ -44,6 +45,9 @@ class Disciplina:
 
     def __repr__(self):
         return f"{self.nome}"
+    
+    def to_Vertice(self):
+        return algoritmos.Vertice(self.nome)
 
 class Restricoes:
     def __init__(self, lista_disciplinas: list[Disciplina], lista_restricoes_adicionais):
@@ -71,6 +75,24 @@ class Restricoes:
     
     def restricoes(self):
         return self.restricoes_basicas() | self.restrições_adicionais()
+    
+    def to_Vertice(self):
+        restricoes = self.restricoes()
+        vertices = [v.to_Vertice() for v in Disciplina.disciplinas_prova()]
+        restricoes_vert = []
+        for (v, u) in restricoes:
+            for vertice in vertices:
+                if v.nome == vertice.get_label():
+                    v = vertice
+                    break
+            for vertice in vertices:
+                if u.nome == vertice.get_label():
+                    u = vertice
+                    break
+            
+            restricoes_vert.append((v, u))
+
+        return restricoes_vert
 
 class Grafo:
     def __init__(self, vertices, arestas):
@@ -207,3 +229,6 @@ grafo = Grafo(Disciplina.disciplinas_prova(), restricoes.restricoes())
 drafo = grafo.dict_format()
 for d in drafo:
     print("*", d, ":", drafo[d])
+
+grafo_ruda = algoritmos.Grafo([v.to_Vertice() for v in Disciplina.disciplinas_prova()], restricoes.to_Vertice())
+print(grafo_ruda)
