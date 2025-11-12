@@ -5,7 +5,7 @@ import os
 
 class Disciplina:
     disciplinas = []
-    def __init__(self, nome:str, horario:str, dias:list[str], periodos:list[int], curso:list=[1, 0]):
+    def __init__(self, nome:str, horario:str, dias:list[str], periodos:list[int], curso:list=[1, 0], tem_prova=True, pre_requerimento_data=None):
         """
         Classe Disciplina
 
@@ -32,9 +32,9 @@ class Disciplina:
         self.periodos = periodos
         self.curso = curso
         self.horario = horario
-        self.tem_prova = True
+        self.tem_prova = tem_prova
         self.eh_dificil = False
-        self.cor = None
+        self.cor = pre_requerimento_data
 
         Disciplina.disciplinas.append(self)
 
@@ -128,6 +128,12 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
         nome = row['nome']
         horario = str(row['horario'])
         nome_variavel = str(row['nome_variavel']).strip()
+        tem_prova = bool(row['tem_prova'])
+        
+        if pd.notna(row['data_prof_pediu']):
+            data_prof_pediu = int(row['data_prof_pediu'])
+        else:
+            data_prof_pediu = None
 
         # Processa dias: "seg,qua,sex" -> ["seg", "qua", "sex"]
         dias_list = []
@@ -162,7 +168,9 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
             horario=horario,
             dias=dias_list,
             periodos=periodos_list,
-            curso=curso_arg
+            curso=curso_arg,
+            tem_prova=tem_prova,
+            pre_requerimento_data=data_prof_pediu
         )
         
         # *** A MÁGICA ***
