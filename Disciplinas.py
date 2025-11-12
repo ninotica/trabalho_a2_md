@@ -1,7 +1,10 @@
 """Disciplinas FGV EMAp 2025.2"""
+import pandas as pd
+from itertools import combinations
+import os
 
 class Disciplina:
-    disciplinas_prova = []
+    disciplinas = []
     def __init__(self, nome:str, horario:str, dias:list[str], periodos:list[int], curso:list=[1, 0]):
         """
         Classe Disciplina
@@ -28,85 +31,162 @@ class Disciplina:
         self.nome = nome
         self.periodos = periodos
         self.curso = curso
+        self.horario = horario
         self.tem_prova = True
+        self.eh_dificil = False
         self.cor = None
 
-        Disciplina.disciplinas_prova.append(self)
+        Disciplina.disciplinas.append(self)
 
-
+    @classmethod
+    def disciplinas_prova(self):
+        return [d for d in Disciplina.disciplinas if d.tem_prova]
 
     def __repr__(self):
         return f"{self.nome}"
-    
-    @classmethod
-    def __coloracao__(self):
-        return {i : i.cor for i in Disciplina.disciplinas_prova if i.cor is not None}
-    
-    @classmethod
-    def grafo_restricoes_basicas(self):
-        """define um dicionário com as restricoes de disciplinas que não podem ocorrer num mesmo dia"""
-        restricoes = {}
-        for i in Disciplina.disciplinas_prova:
-            restricoes[i] = set([])
-            for j in Disciplina.disciplinas_prova:
-                if j != i:
-                    mesmo_periodo = (set(i.periodos) & set(j.periodos))
-                    mesmo_curso = (set(i.curso) & set(j.curso))
-                    if mesmo_periodo and mesmo_curso:
-                        restricoes[i].add(j)
-        return restricoes
-    
-    @classmethod
-    def restrições_adicionais(self, schedules_atípicos):
-        '''adiciona restrições necessárias para cada aluno puxando disciplinas atípicas'''
-        grafo = Disciplina.grafo_restricoes_basicas()
-        for schedule in schedules_atípicos:
-            for i in schedule:
-                for j in schedule:
-                    if i in Disciplina.disciplinas_prova and j in Disciplina.disciplinas_prova and i != j:
-                        grafo[i].add(j)
-        return grafo
 
+class Restricoes:
+    def __init__(self, lista_disciplinas: list[Disciplina], lista_restricoes_adicionais):
+        self.lista_disciplinas = lista_disciplinas
+        self.lista_restricoes = lista_restricoes_adicionais
+ 
+    def restricoes_basicas(self):
+        """define um dicionário com as restricoes de disciplinas que não podem ocorrer num mesmo dia"""
+        restricoes = set()
+        for i, j in combinations(self.lista_disciplinas, 2):
+            mesmo_periodo = (set(i.periodos) & set(j.periodos))
+            mesmo_curso = (set(i.curso) & set(j.curso))
+            if mesmo_periodo and mesmo_curso:
+                restricoes.add((i, j))
+        return restricoes
+
+    def restrições_adicionais(self):
+        '''adiciona restrições necessárias para cada aluno puxando disciplinas atípicas'''
+        restricoes_adicionais = set()
+        for schedule in self.lista_restricoes:
+            for i, j in combinations(schedule, 2):
+                if i in self.lista_disciplinas and j in self.lista_disciplinas:
+                    restricoes_adicionais.add((i, j))
+        return restricoes_adicionais
+    
+    def restricoes(self):
+        return self.restricoes_basicas() | self.restrições_adicionais()
+
+class Grafo:
+    def __init__(self, vertices, arestas):
+        self.elementos = vertices
+        self.restricoes = arestas
+    
+    def dict_format(self):
+        dicionario = {}
+        for i in self.elementos:
+            dicionario[i] = set()
+            for j in self.elementos:
+                if (i, j) in self.restricoes or (j, i) in self.restricoes:
+                    dicionario[i].add(j)
+        return dicionario
+    
+    def coloracao(self):
+        return {i:i.cor for i in self.elementos}
+    
+    def calendario(self):
+        cores = {i.cor for i in self.elementos if i.cor is not None}
+        calendario = {}
+        for i in cores:
+            calendario[i] = [d for d in self.elementos if d.cor == i]
+            return calendario
+    
+def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
+    """
+    Carrega as disciplinas de um arquivo .csv ou .xlsx e as cria
+    no escopo global usando a coluna 'nome_variavel'.
+    
+    O arquivo deve ter as colunas: 
+    'nome', 'horario', 'dias', 'periodos', 'cursos', 'nome_variavel'
+    """
+    try:
+        if caminho_arquivo.endswith('.csv'):
+            df = pd.read_csv(caminho_arquivo, encoding='latin-1', delimiter=";")
+        elif caminho_arquivo.endswith('.xlsx'):
+            df = pd.read_excel(caminho_arquivo, encoding='latin-1', delimiter=";")
+        else:
+            raise ValueError("Formato de arquivo não suportado (.csv ou .xlsx).")
+    except FileNotFoundError:
+        print(f"ERRO: Arquivo não encontrado em '{caminho_arquivo}'")
+        return
+    except Exception as e:
+        print(f"ERRO ao ler o arquivo: {e}")
+        return
+
+    # Limpa a lista de disciplinas existente para evitar duplicatas
+    Disciplina.disciplinas = []
+    
+    print(f"Carregando disciplinas de '{caminho_arquivo}'...")
+
+    for _, row in df.iterrows():
+        # Trata valores NaN (células vazias) do Excel
+        nome = row['nome']
+        horario = str(row['horario'])
+        nome_variavel = str(row['nome_variavel']).strip()
+
+        # Processa dias: "seg,qua,sex" -> ["seg", "qua", "sex"]
+        dias_list = []
+        if pd.notna(row['dias']):
+            dias_list = [dia.strip() for dia in str(row['dias']).split(',')]
+
+        # Processa periodos: "4,6" -> [4, 6] ou "" -> []
+        periodos_list = []
+        if pd.notna(row['periodos']) and str(row['periodos']).strip():
+            try:
+                periodos_list = [int(p.strip()) for p in str(row['periodos']).split(',')]
+            except ValueError:
+                print(f"  Aviso: Valor de 'periodos' inválido para '{nome}'. Usando [].")
+                
+        # Processa cursos: "CD" -> [1], "MAp" -> [0], "CD,MAp" ou "" -> [1, 0]
+        curso_arg = [1, 0] # Default
+        if pd.notna(row['cursos']):
+            cursos_str = str(row['cursos']).lower().strip()
+            if cursos_str == 'cd':
+                curso_arg = [1]
+            elif cursos_str == 'map':
+                curso_arg = [0]
+            # Nota: "cd,map" ou "" já caem no default [1, 0]
+            
+        if not nome or not nome_variavel or nome_variavel == 'nan':
+            print(f"  Aviso: Pulando linha por falta de 'nome' ou 'nome_variavel'.")
+            continue
+
+        # Cria a instância da Disciplina
+        nova_disciplina = Disciplina(
+            nome=nome,
+            horario=horario,
+            dias=dias_list,
+            periodos=periodos_list,
+            curso=curso_arg
+        )
+        
+        # *** A MÁGICA ***
+        # Injeta a variável no escopo global do script
+        # ex: globals()['AR'] = nova_disciplina
+        globals()[nome_variavel] = nova_disciplina
+
+    print(f"Carregadas {len(Disciplina.disciplinas)} disciplinas.")
 ################################################################################
 # Setup Inicial
 ################################################################################
-semestre = 2
-
-if semestre == 2: #seta as disciplinas de semestres ímpares
-    CUV = Disciplina("Cálculo em uma Variável", "9h20", ["seg", "qua", "sex"], [1])
-    LP = Disciplina("Linguagens de Programação", "7h30", ["seg", "qua", "sex"], [2])
-    CVV = Disciplina("Cálculo em Várias Variáveis", "9h20", ["seg", "qua", "sex"], [2])
-    AL = Disciplina("Algebra Linear", "11h10", ["seg", "qua", "sex"], [2])
-    AEDV = Disciplina("Análise Exploratória de Dados e Visualização", "9h20", ["ter", "qui"], [2], [1])
-    MFF = Disciplina("Modelagem de Fenômenos Físicos", "9h20", ["ter", "qui"], [2], [0])
-    MD = Disciplina("Matemática Discreta", "11h10", ["ter", "qui"], [2])
-    PAA = Disciplina("Projeto e Análise de Algoritmos", "7h30", ["seg", "qua"], [4], [1])
-    CR = Disciplina("Ciência de Redes", "9h20", ["seg", "qua"], [4, 6], [1])
-    MI = Disciplina("Modelagem Informacional", "11h10", ["seg", "qua"], [4], [1])
-    IE = Disciplina("Inferência Estatística", "9h20", ["ter", "sex"], [4])
-    OCD = Disciplina("Otimização para Ciência de Dados", "11h10", ["ter", "qui"], [4], [1])
-    HM = Disciplina("História da Matemática", "11h10", ["seg", "qua"], [], [0])
-    AR = Disciplina("Análise na Reta", "14h20", ["seg", "qua", "sex"], [4], [0])
-    AC = Disciplina("Algebra e Criptografia", "7h30", ["ter", "qui"], [4, 8], [0])
-    ES = Disciplina("Engenharia de Software", "7h30", ["ter", "qui"], [6], [1])
-    AP = Disciplina("Aprendizado Profundo", "9h20", ["ter", "qui"], [6], [1])
-    ST = Disciplina("Séries Temporais", "11h10", ["ter", "qui"], [6], [1])
-    PE = Disciplina("Processos Estocásticos", "9h20", ["seg", "qua"], [6], [0])
-    EDP = Disciplina("Equações Diferenciais Parciais", "9h20", ["ter", "qui"], [6], [0])
-    IAN = Disciplina("Introdução à Análise Numérica", "11h10", ["ter", "qui"], [6], [0])
-    EMD = Disciplina("Ética na Manipulação de Dados", "11h10", ["ter", "qui"], [8], [1])
-    OC = Disciplina("Otimização Contínua", "11h10", ["seg", "qua"], [8], [0])
+file_path = os.path.join("disciplinas_gemini.csv")
+carregar_disciplinas_do_arquivo(file_path)
 
 nr_dias = 7
 
-requerimentos_profs = {AR: 1, AL : 2} #chave é a disciplina, valor é o dia. 
-
 solucoes_desejadas = 5
+
+requerimentos_profs = {AR: 1, AL : 2} #chave é a disciplina, valor é o dia. 
 
 alunos_puxando = { # set com listas de todas as disciplinas que o aluno com schedule incomum está puxando
 (AL, AR, MD, LP, CVV, AEDV, EMD),
 (AL, AR, MD, LP, CVV, MFF),
-(AC, AL, MD, LP, CVV, AEDV)
+(AC, AL, MD, LP, CVV, AEDV),
 }
 
 materias_dificeis = {MD, AL}
@@ -114,9 +194,8 @@ materias_dificeis = {MD, AL}
 ################################################################################
 # Criação do Grafo
 ################################################################################
-
-grafo = Disciplina.restrições_adicionais(alunos_puxando)
-
-if __name__ == "__main__":
-    for d in grafo:
-        print(d, ': ',grafo[d])
+restricoes = Restricoes(Disciplina.disciplinas_prova(), alunos_puxando)
+grafo = Grafo(Disciplina.disciplinas_prova(), restricoes.restricoes())
+drafo = grafo.dict_format()
+for d in drafo:
+    print("*", d, ":", drafo[d])
