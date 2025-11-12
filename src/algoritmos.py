@@ -20,7 +20,7 @@ class Vertice():
         self.vizinhos = []
     
     def __str__(self):
-        return self.label
+        return str(self.label)
     
     def __repr__(self):
         return str(self.label)
@@ -79,26 +79,23 @@ class Vertice():
     def get_vizinhos(self):
         return self.vizinhos
     
-class Aresta():
-    def __init__(self, vertice1, vertice2):
-        self.aresta = set([vertice1, vertice2])
-    
-    def __str__(self):
-        return set([v.__str__() for v in self.aresta])
-    
-    def __repr__(self):
-        return str(set([v.__str__() for v in self.aresta]))
-    
-    def get_aresta(self):
-        return self.aresta
-    
 class Grafo():
-    def __init__(self, vertices: list[Vertice], arestas: list[Aresta]):
+    def __init__(self, vertices: list[Vertice], arestas: list[tuple[Vertice, Vertice]]):
         self.vertices = copy.deepcopy(vertices)
-        self.arestas = copy.deepcopy(arestas)
+        self.arestas = {}
+        for v in vertices:
+            self.arestas[v] = set()
+            for u in vertices:
+                if (v, u) in arestas:
+                    self.arestas[v].add(u)
+                    v.set_grau(v.get_grau() + 1)
     
     def __str__(self):
-        return f"Vértices:\n{[v.__str__() for v in self.vertices]}\n\nArestas:\n{[e.__str__() for e in self.arestas]}"
+        vertices = f'Vértices:\n{[v.__str__() for v in self.vertices]}\n\n'
+        arestas = 'Arestas:\n'
+        for vertice, vizinhos in self.arestas.items():
+            arestas += f'{vertice}: {vizinhos}'+'\n'
+        return vertices + arestas
     
     def set_vertices(self, vertices):
         self.vertices = vertices
@@ -221,7 +218,6 @@ def busca_DSATUR(grafo: Grafo, cores: dict[int: list[Vertice]]):
         qtd_cor += 1
 
     return (qtd_cor, cores)
-
     
 
 if __name__ == '__main__':
@@ -233,24 +229,19 @@ if __name__ == '__main__':
             if random.randint(1, 10) > 5:
                 vertices[i].add_vizinho(vertices[j])
                 vertices[j].add_vizinho(vertices[i])
-                arestas.append(Aresta(vertices[i], vertices[j]))
+                
+                arestas.append((vertices[i], vertices[j]))
+                arestas.append((vertices[j], vertices[i]))
+
                 vertices[i].set_grau(vertices[i].get_grau() + 1)
                 vertices[j].set_grau(vertices[j].get_grau() + 1)
 
     grafo = Grafo(vertices, arestas)
     cores = {i: [] for i in range(num_vertice)}
 
-    # grafo = inicializar_grafo(grafo)
     print(grafo)
-    # for v in vertices:
-    #     print([u.get_label() for u in v.get_vizinhos()])
 
     print('\n\nbla bla bla\n\n')
-    # num_cores, coloracao = busca_backtraking(grafo, copy.deepcopy(cores), 0)
-    # print(num_cores)
-    # print(coloracao)
-    # for v in grafo.get_vertices():
-        # v.set_cor(None)
 
     num_cores, coloracao = busca_gulosa_seq(grafo, copy.deepcopy(cores))
     print(num_cores)
