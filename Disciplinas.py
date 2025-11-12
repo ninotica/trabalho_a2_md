@@ -74,16 +74,16 @@ class Grafo:
         self.elementos = vertices
         self.restricoes = arestas
     
-    def dict(self):
+    def dict_format(self):
         dicionario = {}
         for i in self.elementos:
             dicionario[i] = set()
-            for j, k in self.restricoes:
-                if i == j:
-                    dicionario[i].add(k)
-                if i == k:
+            for j in self.elementos:
+                if (i, j) in self.restricoes or (j, i) in self.restricoes:
                     dicionario[i].add(j)
         return dicionario
+    
+
 ################################################################################
 # Setup Inicial
 ################################################################################
@@ -133,5 +133,7 @@ materias_dificeis = {MD, AL}
 ################################################################################
 
 restricoes = Restricoes(Disciplina.disciplinas_prova(), alunos_puxando)
-grafo = Grafo(Disciplina.disciplinas_prova(), restricoes.restricoes())
-print(grafo.dict())
+grafo = Grafo(Disciplina.disciplinas_prova(), restricoes.restricoes()).dict_format()
+if __name__ == "__main__":
+    for i in grafo:
+        print(i, ":", grafo[i])
