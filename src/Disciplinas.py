@@ -174,7 +174,7 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
 ################################################################################
 # Setup Inicial
 ################################################################################
-file_path = os.path.join("disciplinas_gemini.csv")
+file_path = os.path.join('data', 'disciplinas_gemini.csv')
 carregar_disciplinas_do_arquivo(file_path)
 
 nr_dias = 7
