@@ -1,7 +1,8 @@
 """Disciplinas FGV EMAp 2025.2"""
+from itertools import combinations
 
 class Disciplina:
-    disciplinas_prova = []
+    disciplinas = []
     def __init__(self, nome:str, horario:str, dias:list[str], periodos:list[int], curso:list=[1, 0]):
         """
         Classe Disciplina
@@ -28,45 +29,61 @@ class Disciplina:
         self.nome = nome
         self.periodos = periodos
         self.curso = curso
+        self.horario = horario
         self.tem_prova = True
-        self.cor = None
+        self.eh_dificil = False
 
-        Disciplina.disciplinas_prova.append(self)
+        Disciplina.disciplinas.append(self)
 
-
+    @classmethod
+    def disciplinas_prova(self):
+        return [d for d in Disciplina.disciplinas if d.tem_prova]
 
     def __repr__(self):
         return f"{self.nome}"
-    
-    @classmethod
-    def __coloracao__(self):
-        return {i : i.cor for i in Disciplina.disciplinas_prova if i.cor is not None}
-    
-    @classmethod
-    def grafo_restricoes_basicas(self):
-        """define um dicionário com as restricoes de disciplinas que não podem ocorrer num mesmo dia"""
-        restricoes = {}
-        for i in Disciplina.disciplinas_prova:
-            restricoes[i] = set([])
-            for j in Disciplina.disciplinas_prova:
-                if j != i:
-                    mesmo_periodo = (set(i.periodos) & set(j.periodos))
-                    mesmo_curso = (set(i.curso) & set(j.curso))
-                    if mesmo_periodo and mesmo_curso:
-                        restricoes[i].add(j)
-        return restricoes
-    
-    @classmethod
-    def restrições_adicionais(self, schedules_atípicos):
-        '''adiciona restrições necessárias para cada aluno puxando disciplinas atípicas'''
-        grafo = Disciplina.grafo_restricoes_basicas()
-        for schedule in schedules_atípicos:
-            for i in schedule:
-                for j in schedule:
-                    if i in Disciplina.disciplinas_prova and j in Disciplina.disciplinas_prova and i != j:
-                        grafo[i].add(j)
-        return grafo
 
+class Restricoes:
+    def __init__(self, lista_disciplinas: list[Disciplina], lista_restricoes):
+        self.lista_disciplinas = lista_disciplinas
+        self.lista_restricoes = lista_restricoes
+ 
+    def restricoes_basicas(self):
+        """define um dicionário com as restricoes de disciplinas que não podem ocorrer num mesmo dia"""
+        restricoes = set()
+        for i, j in combinations(self.lista_disciplinas, 2):
+            mesmo_periodo = (set(i.periodos) & set(j.periodos))
+            mesmo_curso = (set(i.curso) & set(j.curso))
+            if mesmo_periodo and mesmo_curso:
+                restricoes.add((i, j))
+        return restricoes
+
+    def restrições_adicionais(self):
+        '''adiciona restrições necessárias para cada aluno puxando disciplinas atípicas'''
+        restricoes_adicionais = set()
+        for schedule in self.lista_restricoes:
+            for i, j in combinations(schedule, 2):
+                if i in self.lista_disciplinas and j in self.lista_disciplinas:
+                    restricoes_adicionais.add((i, j))
+        return restricoes_adicionais
+    
+    def restricoes(self):
+        return self.restricoes_basicas() | self.restrições_adicionais()
+
+class Grafo:
+    def __init__(self, vertices, arestas):
+        self.elementos = vertices
+        self.restricoes = arestas
+    
+    def dict(self):
+        dicionario = {}
+        for i in self.elementos:
+            dicionario[i] = set()
+            for j, k in self.restricoes:
+                if i == j:
+                    dicionario[i].add(k)
+                if i == k:
+                    dicionario[i].add(j)
+        return dicionario
 ################################################################################
 # Setup Inicial
 ################################################################################
@@ -106,7 +123,7 @@ solucoes_desejadas = 5
 alunos_puxando = { # set com listas de todas as disciplinas que o aluno com schedule incomum está puxando
 (AL, AR, MD, LP, CVV, AEDV, EMD),
 (AL, AR, MD, LP, CVV, MFF),
-(AC, AL, MD, LP, CVV, AEDV)
+(AC, AL, MD, LP, CVV, AEDV),
 }
 
 materias_dificeis = {MD, AL}
@@ -115,8 +132,6 @@ materias_dificeis = {MD, AL}
 # Criação do Grafo
 ################################################################################
 
-grafo = Disciplina.restrições_adicionais(alunos_puxando)
-
-if __name__ == "__main__":
-    for d in grafo:
-        print(d, ': ',grafo[d])
+restricoes = Restricoes(Disciplina.disciplinas_prova(), alunos_puxando)
+grafo = Grafo(Disciplina.disciplinas_prova(), restricoes.restricoes())
+print(grafo.dict())
