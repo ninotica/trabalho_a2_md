@@ -87,6 +87,10 @@ class Vertice():
         else:
             print('Não é um vizinho válido')
 
+    def satura_vizinhos(self, soma_saturacao):
+        for vizinho in self.vizinhos:
+            vizinho.set_saturacao(vizinho.get_saturacao() + soma_saturacao)
+
     def get_vizinhos(self):
         return self.vizinhos
     
@@ -121,7 +125,6 @@ class Grafo():
 
                         arestas.remove(aresta)
             self.vertices.append(v)
-        print('teste')
                         
     
     def __str__(self):
@@ -156,10 +159,6 @@ class Grafo():
                     temp = v
                     self.vertices[i] = u
                     self.vertices[j] = v
-
-                    # TODO: adicionar ordenacao por grau
-
-    # TODO: adicionar metodo pra saturar vizinhos e ordenar 
 
     def get_arestas(self):
         return self.arestas       
@@ -212,6 +211,60 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]], num_colorid
     
     return (num_cores_encontrado, coloracao_encontrada)
 
+def busca_BTDSATUR(grafo: Grafo, cores: dict[int: list[Vertice]], num_coloridos: int, num_cores_encontrado=None, coloracao_encontrada=None):
+    num_vertices = len(grafo.get_vertices())
+    if num_cores_encontrado == None: num_cores_encontrado = num_vertices + 1
+    
+    max_cor = 0
+    for v in grafo.get_vertices():
+        cor = v.get_cor()
+        if cor != None:
+            if cor > max_cor:
+                if cor + 1 >= num_cores_encontrado:
+                    (num_cores_encontrado, coloracao_encontrada)
+                max_cor = cor
+
+    if num_coloridos == num_vertices:
+        if max_cor + 1 < num_cores_encontrado:
+            num_cores_encontrado = max_cor + 1
+            coloracao_encontrada = cores
+
+        return (num_cores_encontrado, coloracao_encontrada)
+
+    v = None
+    for u in grafo.get_vertices():
+        if u.get_cor() == None:
+            if v == None:
+                v = u
+            elif u.get_saturacao() > v.get_saturacao():
+                v = u
+            elif u.get_saturacao() == v.get_saturacao() and u.get_grau() > v.get_grau():
+                v = u
+        
+    blocked_colors = []
+
+    for u in v.get_vizinhos():
+        if u.get_cor() != None:
+            blocked_colors.append(u.get_cor())
+
+    for i in range(max_cor + 2):
+        if i == num_vertices: break
+        if i > num_cores_encontrado:
+            return (num_cores_encontrado, coloracao_encontrada)
+        if i in blocked_colors:
+            continue
+        v.set_cor(i)
+        cores[i].append(v)
+        num_cores, coloracao = busca_backtraking(grafo, cores, num_coloridos + 1, num_cores_encontrado, coloracao_encontrada)
+        if num_cores < num_cores_encontrado:
+            num_cores_encontrado = num_cores
+            coloracao_encontrada = copy.deepcopy(coloracao)
+        cores[i].pop()
+        v.set_cor(None)
+    
+    return (num_cores_encontrado, coloracao_encontrada)
+
+
 # TODO: adicionar backtracking com ordenação por saturação
 
 def busca_gulosa_seq(grafo: Grafo, cores: dict[int: list[Vertice]], num_coloridos: int=0):
@@ -245,16 +298,21 @@ def busca_DSATUR(grafo: Grafo, cores: dict[int: list[Vertice]]):
     num_vertices = len(grafo.get_vertices())
     grafo.sort_vertices_grau()
     v = grafo.get_vertices()[0]
-    v.set_cor([cor for cor in cores.keys()][0])
-    for u in v.get_vizinhos():
-        u.set_saturacao(u.get_saturacao() + 1)
+    v.set_cor(0)
+    cores[0].append(v)
+    v.satura_vizinhos(1)
 
     for _ in range(1, num_vertices):
-        grafo.sort_vertices_saturacao()
         u = None
         for w in grafo.get_vertices():
             if w.get_cor() == None:
-                u = w
+                if u == None:
+                    u = w
+                elif u.get_saturacao() < w.get_saturacao():
+                    u = w
+                elif u.get_saturacao() == w.get_saturacao():
+                    if u.get_grau() < w.get_grau():
+                        u = w
 
         disponivel = list(range(num_vertices))
         for w in u.get_vizinhos():
@@ -264,8 +322,7 @@ def busca_DSATUR(grafo: Grafo, cores: dict[int: list[Vertice]]):
         u.set_cor(disponivel[0])
         cores[disponivel[0]].append(u)
 
-        for w in u.get_vizinhos():
-            w.set_saturacao(w.get_saturacao() + 1)
+        u.satura_vizinhos(1)
 
     qtd_cor = 0
     for cor in cores.values():
@@ -295,7 +352,7 @@ if __name__ == '__main__':
     arestas = []
     for i in range(num_vertice):
         for j in range(i+1, num_vertice):
-            if random.randint(1, 10) > 5:
+            if random.randint(0, 10) > 4:
                 vertices[i].add_vizinho(vertices[j])
                 vertices[j].add_vizinho(vertices[i])
                 
@@ -310,7 +367,7 @@ if __name__ == '__main__':
 
     print(grafo)
 
-    print('\n\Seguem casos de teste\n')
+    print('\nSeguem casos de teste\n')
 
     print(f'\nBusca com um algorítimo guloso sequencial para um grafo de {num_vertice} vértices:')
     num_cores, coloracao = busca_gulosa_seq(grafo, copy.deepcopy(cores))
@@ -328,6 +385,13 @@ if __name__ == '__main__':
 
     print(f'\nBusca com um algorítimo de backtracking para um grafo de {num_vertice} vértices:')
     num_cores, coloracao = busca_backtraking(grafo, copy.deepcopy(cores), 0, num_cores, coloracao)
+    print(num_cores)
+    print(coloracao)
+    for v in grafo.get_vertices():
+        v.set_cor(None)
+
+    print(f'\nBusca com um algorítimo de BTDSATUR para um grafo de {num_vertice} vértices:')
+    num_cores, coloracao = busca_BTDSATUR(grafo, copy.deepcopy(cores), 0)
     print(num_cores)
     print(coloracao)
     for v in grafo.get_vertices():
