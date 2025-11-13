@@ -28,7 +28,18 @@ class Vertice():
     def __eq__(self, value):
         if not isinstance(value, Vertice):
             return NotImplemented
-        return self.label == value.label and self.grau == value.grau and self.cor == value.cor and self.vizinhos == value.vizinhos
+        if self.label != value.label:
+            return False
+        if self.cor != value.cor:
+            return False
+        if self.grau != value.grau:
+            return False
+        if self.saturacao != value.saturacao:
+            return False
+        if len(self.vizinhos) != len(value.vizinhos):
+            return False
+        return True
+        # TODO: avaliar o estado de igualdade dos vizinhos (problema de recurssão infinita)
     
     def set_label(self, label):
         self.label = label
@@ -81,23 +92,36 @@ class Vertice():
     
 class Grafo():
     def __init__(self, vertices: list[Vertice], arestas: list[tuple[Vertice, Vertice]]):
-        self.vertices = copy.deepcopy(vertices)
+        self.vertices = []
         self.arestas = {v.get_label(): [] for v in vertices}
-        for v in vertices:
-            vertices.remove(v)
-            if vertices == [] or arestas == []:
+        num_vertices = len(vertices)
+        for _ in range(num_vertices):
+            v = vertices.pop(0)
+            if vertices == []:
                 break
             for u in vertices:
+                if arestas == []:
+                    break
+
                 for aresta in arestas:
                     if (v, u) == aresta or (u, v) == aresta:
                         if not u in self.arestas[v.get_label()]:
-                            aresta[0].set_grau(aresta[0].get_grau() + 1)
-                            aresta[1].set_grau(aresta[1].get_grau() + 1)
                             self.arestas[v.get_label()].append(u)
                             self.arestas[u.get_label()].append(v)
+
                             v.set_grau(v.get_grau() + 1)
                             u.set_grau(u.get_grau() + 1)
-                            arestas.remove(aresta)
+                            v.add_vizinho(u)
+                            u.add_vizinho(v)
+
+                            aresta[0].set_grau(aresta[0].get_grau() + 1)
+                            aresta[1].set_grau(aresta[1].get_grau() + 1)
+                            aresta[0].add_vizinho(aresta[1])
+                            aresta[1].add_vizinho(aresta[0])
+
+                        arestas.remove(aresta)
+            self.vertices.append(v)
+        print('teste')
                         
     
     def __str__(self):
@@ -118,10 +142,24 @@ class Grafo():
             for j in range(i + 1, len(self.vertices)):
                 v = self.vertices[i]
                 u = self.vertices[j]
-                if u.get_grau() < v.get_grau():
+                if u.get_grau() > v.get_grau():
                     temp = v
                     self.vertices[i] = u
                     self.vertices[j] = v
+
+    def sort_vertices_saturacao(self):
+        for i in range(len(self.vertices)):
+            for j in range(i + 1, len(self.vertices)):
+                v = self.vertices[i]
+                u = self.vertices[j]
+                if u.get_saturacao() > v.get_saturacao():
+                    temp = v
+                    self.vertices[i] = u
+                    self.vertices[j] = v
+
+                    # TODO: adicionar ordenacao por grau
+
+    # TODO: adicionar metodo pra saturar vizinhos e ordenar 
 
     def get_arestas(self):
         return self.arestas       
@@ -129,16 +167,13 @@ class Grafo():
 def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]], num_coloridos: int, num_cores_encontrado=None, coloracao_encontrada=None):
     num_vertices = len(grafo.get_vertices())
     if num_cores_encontrado == None: num_cores_encontrado = num_vertices + 1
-    v = None
-    for vertice in grafo.get_vertices():
-        if vertice.get_cor() == None:
-            v = vertice
-            break
     
     max_cor = 0
     for cor in [vert.get_cor() for vert in grafo.get_vertices()]:
         if cor != None:
             if cor > max_cor: 
+                if cor >= num_cores_encontrado:
+                    return (num_cores_encontrado, coloracao_encontrada)
                 max_cor = cor
 
     if num_coloridos == num_vertices:
@@ -147,8 +182,16 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]], num_colorid
             coloracao_encontrada = cores
 
         return (num_cores_encontrado, coloracao_encontrada)
+    
+    v = None
+    for vertice in grafo.get_vertices():
+        if vertice.get_cor() == None:
+            v = vertice
+            break
 
     disponivel = [True for _ in range(num_vertices)]
+
+    # TODO: alterar para vetor de cores bloqueadas
 
     for u in v.get_vizinhos():
         if u.get_cor() != None:
@@ -170,6 +213,8 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]], num_colorid
     
     return (num_cores_encontrado, coloracao_encontrada)
 
+# TODO: adicionar backtracking com ordenação por saturação
+
 def busca_gulosa_seq(grafo: Grafo, cores: dict[int: list[Vertice]], num_coloridos: int=0):
     grafo.sort_vertices_grau()
     num_vertices = len(grafo.get_vertices())
@@ -187,12 +232,12 @@ def busca_gulosa_seq(grafo: Grafo, cores: dict[int: list[Vertice]], num_colorido
     v.set_cor(disponivel[0])
     cores[disponivel[0]].append(v)
 
-    if num_coloridos + 1 == num_vertice:
+    if num_coloridos + 1 == num_vertices:
         qtd_cor = 0
         for cor in cores.values():
-            if len(cor) == 0:
-                break
-            qtd_cor += 1
+            if len(cor) > 0:
+                qtd_cor += 1
+
         return (qtd_cor, cores)
     
     return busca_gulosa_seq(grafo, cores, num_coloridos + 1)
@@ -201,25 +246,27 @@ def busca_DSATUR(grafo: Grafo, cores: dict[int: list[Vertice]]):
     num_vertices = len(grafo.get_vertices())
     grafo.sort_vertices_grau()
     v = grafo.get_vertices()[0]
+    v.set_cor([cor for cor in cores.keys()][0])
     for u in v.get_vizinhos():
         u.set_saturacao(u.get_saturacao() + 1)
 
-    for u in [u2 for u2 in grafo.get_vertices() if u2 != v]:
-        v2 = u
-        for v3 in [v4 for v4 in grafo.get_vertices() if v4.get_cor() == None]:
-            if v3.get_saturacao() > v2.get_saturacao():
-                v2 = v3
-        
+    for _ in range(1, num_vertices):
+        grafo.sort_vertices_saturacao()
+        u = None
+        for w in grafo.get_vertices():
+            if w.get_cor() == None:
+                u = w
+
         disponivel = list(range(num_vertices))
-        for v3 in v2.get_vizinhos():
-            if v3.get_cor() in disponivel:
-                disponivel.remove(v3.get_cor())
+        for w in u.get_vizinhos():
+            if w.get_cor() in disponivel:
+                disponivel.remove(w.get_cor())
 
-        v2.set_cor(disponivel[0])
-        cores[disponivel[0]].append(v2)
+        u.set_cor(disponivel[0])
+        cores[disponivel[0]].append(u)
 
-        for v3 in v2.get_vizinhos():
-            v3.set_saturacao(v3.get_saturacao() + 1)
+        for w in u.get_vizinhos():
+            w.set_saturacao(w.get_saturacao() + 1)
 
     qtd_cor = 0
     for cor in cores.values():
@@ -229,6 +276,19 @@ def busca_DSATUR(grafo: Grafo, cores: dict[int: list[Vertice]]):
 
     return (qtd_cor, cores)
     
+def limpar_coloracao(coloracao):
+    nova_coloracao = {}
+    for cor, vertices in coloracao.items():
+        if len(vertices) > 0:
+            nova_coloracao[cor] = vertices
+
+    return nova_coloracao
+
+def encher_coloracao(coloracao, tam_grafo):
+    tam_coloracao = len(coloracao.keys())
+    for i in range(tam_coloracao, tam_grafo):
+        coloracao[i] = []
+    return coloracao
 
 if __name__ == '__main__':
     num_vertice = 25
@@ -251,20 +311,23 @@ if __name__ == '__main__':
 
     print(grafo)
 
-    print('\n\nbla bla bla\n\n')
+    print('\n\Seguem casos de teste\n')
 
+    print(f'\nBusca com um algorítimo guloso sequencial para um grafo de {num_vertice} vértices:')
     num_cores, coloracao = busca_gulosa_seq(grafo, copy.deepcopy(cores))
     print(num_cores)
     print(coloracao)
     for v in grafo.get_vertices():
         v.set_cor(None)
 
+    print(f'\nBusca com um algorítimo DSATUR para um grafo de {num_vertice} vértices:')
     num_cores, coloracao = busca_DSATUR(grafo, copy.deepcopy(cores))
     print(num_cores)
     print(coloracao)
     for v in grafo.get_vertices():
         v.set_cor(None)
 
+    print(f'\nBusca com um algorítimo de backtracking para um grafo de {num_vertice} vértices:')
     num_cores, coloracao = busca_backtraking(grafo, copy.deepcopy(cores), 0, num_cores, coloracao)
     print(num_cores)
     print(coloracao)

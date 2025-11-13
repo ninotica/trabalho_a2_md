@@ -3,6 +3,7 @@ import pandas as pd
 from itertools import combinations
 import os
 import algoritmos
+import copy
 
 class Disciplina:
     disciplinas = []
@@ -232,3 +233,31 @@ for d in drafo:
 
 grafo_ruda = algoritmos.Grafo([v.to_Vertice() for v in Disciplina.disciplinas_prova()], restricoes.to_Vertice())
 print(grafo_ruda)
+
+num_vertices = len(grafo_ruda.get_vertices())
+cores = {i: [] for i in range(num_vertices)}
+
+print('\nBusca com um algorítmo guloso sequencial:')
+num_cores, coloracao = algoritmos.busca_gulosa_seq(grafo_ruda, copy.deepcopy(cores))
+coloracao = algoritmos.limpar_coloracao(coloracao)
+print(f'Número de cores necessário: {num_cores}')
+print(f'Coloração:\n{coloracao}')
+for v in grafo_ruda.get_vertices():
+    v.set_cor(None)
+
+print('\nBusca com um algorítmo DSATUR:')
+num_cores, coloracao = algoritmos.busca_DSATUR(grafo_ruda, copy.deepcopy(cores))
+coloracao = algoritmos.limpar_coloracao(coloracao)
+print(f'Número de cores necessário: {num_cores}')
+print(f'Coloração:\n{coloracao}')
+for v in grafo_ruda.get_vertices():
+    v.set_cor(None)
+
+
+print('\nBusca com um algorítmo de backtracking:')
+num_cores, coloracao = algoritmos.busca_backtraking(grafo_ruda, copy.deepcopy(cores), 0, num_cores, algoritmos.encher_coloracao(coloracao, len(grafo_ruda.get_vertices())))
+coloracao = algoritmos.limpar_coloracao(coloracao)
+print(f'Número de cores necessário: {num_cores}')
+print(f'Coloração:\n{coloracao}')
+for v in grafo_ruda.get_vertices():
+    v.set_cor(None)
