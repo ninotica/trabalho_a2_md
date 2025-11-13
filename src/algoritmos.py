@@ -172,7 +172,7 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]], num_colorid
     for cor in [vert.get_cor() for vert in grafo.get_vertices()]:
         if cor != None:
             if cor > max_cor: 
-                if cor >= num_cores_encontrado:
+                if cor + 1 >= num_cores_encontrado:
                     return (num_cores_encontrado, coloracao_encontrada)
                 max_cor = cor
 
@@ -189,27 +189,26 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]], num_colorid
             v = vertice
             break
 
-    disponivel = [True for _ in range(num_vertices)]
-
-    # TODO: alterar para vetor de cores bloqueadas
+    blocked_colors = []
 
     for u in v.get_vizinhos():
         if u.get_cor() != None:
-            disponivel[u.get_cor()] = False
+            blocked_colors.append(u.get_cor())
 
     for i in range(max_cor + 2):
         if i == num_vertices: break
         if i > num_cores_encontrado:
             return (num_cores_encontrado, coloracao_encontrada)
-        if disponivel[i]:
-            v.set_cor(i)
-            cores[i].append(v)
-            num_cores, coloracao = busca_backtraking(grafo, cores, num_coloridos + 1, num_cores_encontrado, coloracao_encontrada)
-            if num_cores < num_cores_encontrado:
-                num_cores_encontrado = num_cores
-                coloracao_encontrada = copy.deepcopy(coloracao)
-            cores[i].pop()
-            v.set_cor(None)
+        if i in blocked_colors:
+            continue
+        v.set_cor(i)
+        cores[i].append(v)
+        num_cores, coloracao = busca_backtraking(grafo, cores, num_coloridos + 1, num_cores_encontrado, coloracao_encontrada)
+        if num_cores < num_cores_encontrado:
+            num_cores_encontrado = num_cores
+            coloracao_encontrada = copy.deepcopy(coloracao)
+        cores[i].pop()
+        v.set_cor(None)
     
     return (num_cores_encontrado, coloracao_encontrada)
 

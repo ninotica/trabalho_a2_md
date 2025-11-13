@@ -253,7 +253,6 @@ print(f'Coloração:\n{coloracao}')
 for v in grafo_ruda.get_vertices():
     v.set_cor(None)
 
-
 print('\nBusca com um algorítmo de backtracking:')
 num_cores, coloracao = algoritmos.busca_backtraking(grafo_ruda, copy.deepcopy(cores), 0, num_cores, algoritmos.encher_coloracao(coloracao, len(grafo_ruda.get_vertices())))
 coloracao = algoritmos.limpar_coloracao(coloracao)
