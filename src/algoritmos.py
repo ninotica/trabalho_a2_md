@@ -207,10 +207,11 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_
         if u.get_cor() != None:
             blocked_colors.append(u.get_cor())
 
-    cor_limite = max_cor + 1
-    if num_coloridos == 0: cor_limite = max_cor
-    for i in range(cor_limite + 1):
-        if i == num_vertices: break
+    # sozinho = False
+    for i in range(max_cor + 2):
+        if i >= num_vertices: break
+        # if sozinho and cores[i] == []:
+        #     continue
         if i in blocked_colors:
             continue
         v.set_cor(i)
@@ -221,6 +222,9 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_
             coloracao_encontrada = copy.deepcopy(coloracao)
         cores[i].pop()
         v.set_cor(None)
+
+        # if sozinho == False and cores[i] == []:
+        #     sozinho = True
     
     return (num_cores_encontrado, coloracao_encontrada)
 
@@ -261,10 +265,11 @@ def busca_BTDSATUR(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_col
         if u.get_cor() != None:
             blocked_colors.append(u.get_cor())
 
-    cor_limite = max_cor + 1
-    if num_coloridos == 0: cor_limite = max_cor
-    for i in range(cor_limite + 1):
-        if i == num_vertices: break
+    # sozinho = False
+    for i in range(max_cor + 2):
+        if i >= num_vertices: break
+        # if sozinho and cores[i] == []:
+        #     continue
         if i in blocked_colors:
             continue
         v.set_cor(i)
@@ -277,6 +282,9 @@ def busca_BTDSATUR(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_col
         cores[i].pop()
         v.set_cor(None)
         v.satura_vizinhos(-1)
+
+        # if sozinho == False and cores[i] == []:
+        #     sozinho = True
     
     return (num_cores_encontrado, coloracao_encontrada)
 
@@ -363,9 +371,9 @@ def encher_coloracao(coloracao, tam_grafo):
 
 if __name__ == '__main__':
 
-    grafo = Grafo.gerar_grafo_generico(50, 50)
+    grafo = Grafo.gerar_grafo_generico(75, 25)
 
     print(grafo)
 
     print(busca_BTDSATUR(grafo))
-    print(busca_backtraking(grafo.reset_coloracao_vertices()))
+    # print(busca_backtraking(grafo.reset_coloracao_vertices()))

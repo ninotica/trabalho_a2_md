@@ -4,8 +4,8 @@ import time
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-def testa_velocidade_coloracoes(funcs: list, max_vertices=25, repeticoes=10, probabilidades=[10, 25, 50, 75]) -> pd.DataFrame:
-    dados = [1]
+def testa_velocidade_coloracoes(funcs: list, min_vertices=1, max_vertices=25, repeticoes=10, probabilidades=[10, 25, 50, 75], filepath: Path= None) -> pd.DataFrame:
+    dados = [min_vertices]
     cols = ['tipo_grafo']
     for func in funcs:
         for i in probabilidades:
@@ -23,7 +23,7 @@ def testa_velocidade_coloracoes(funcs: list, max_vertices=25, repeticoes=10, pro
 
     df = pd.DataFrame([pd.Series(dados, index=cols)], columns=cols, index=[1])
 
-    for i in range(2, max_vertices + 1):
+    for i in range(min_vertices + 1, max_vertices + 1):
         dados = [i]
         for func in funcs:
             for j in probabilidades:
@@ -38,6 +38,7 @@ def testa_velocidade_coloracoes(funcs: list, max_vertices=25, repeticoes=10, pro
             dados.append(average / len(probabilidades))
             print(f'grafo com {i} vértices avaliado para {func.__name__}')
         df = pd.concat([df, pd.DataFrame([pd.Series(dados, index=cols)], columns=cols, index=[1])], ignore_index=True)
+        if filepath != None: df.to_csv(filepath, index=False)
     
     return df
 
@@ -76,9 +77,9 @@ def testa_precisao_coloracoes(funcs: list, max_vertices=25):
 
 if __name__ == '__main__':
     funcs = [algoritmos.busca_backtraking, algoritmos.busca_BTSL, algoritmos.busca_BTDSATUR]
-    df = testa_velocidade_coloracoes(funcs, 15, 100)
-    filepath = Path('data\BT-geral.csv')
-    df.to_csv(filepath, index=False)
+    # df = testa_velocidade_coloracoes(funcs, 1, 15, 100, filepath=Path('data\BT-geral.csv'))
+    # df = testa_velocidade_coloracoes(funcs, 1, 15, 100)
+    df = pd.read_csv(Path('data\BT-geral.csv'))
 
     print(df)
     fig1 = plt.figure(figsize=(16, 9))
@@ -127,9 +128,10 @@ if __name__ == '__main__':
         ax.legend()
 
     funcs.remove(algoritmos.busca_backtraking)
-    df = testa_velocidade_coloracoes(funcs, 20, 100)  
-    filepath = Path('data\BTSL-BTDSATUR.csv')
-    df.to_csv(filepath, index=False)
+    # filepath = Path('data\BTSL-BTDSATUR.csv')
+    # df = testa_velocidade_coloracoes(funcs, 40, 100, 100, filepath=filepath)
+    # df = testa_velocidade_coloracoes(funcs, 1, 30, 100)
+    df = pd.read_csv(Path('data\BTSL-BTDSATUR.csv'))
 
     fig2 = plt.figure(figsize=(16, 9))
     gs = fig2.add_gridspec(2, 3, hspace=0.35, wspace=0.25)
