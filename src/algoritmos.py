@@ -157,7 +157,7 @@ class Grafo():
                 if u.get_grau() > v.get_grau():
                     temp = v
                     self.vertices[i] = u
-                    self.vertices[j] = v
+                    self.vertices[j] = temp
 
     def sort_vertices_saturacao(self):
         for i in range(len(self.vertices)):
@@ -173,6 +173,8 @@ class Grafo():
         for v in self.vertices:
             v.set_cor(None)
             v.set_saturacao(0)
+        
+        return self
 
     def get_arestas(self):
         return self.arestas       
@@ -191,11 +193,7 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_
                 max_cor = cor
 
     if num_coloridos == num_vertices:
-        if max_cor + 1 < num_cores_encontrado:
-            num_cores_encontrado = max_cor + 1
-            coloracao_encontrada = cores
-
-        return (num_cores_encontrado, coloracao_encontrada)
+        return (max_cor + 1, cores) # já se sabe que max_cor + 1 < num_cores_encontrado devido ao loop anterior
     
     v = None
     for vertice in grafo.get_vertices():
@@ -209,7 +207,9 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_
         if u.get_cor() != None:
             blocked_colors.append(u.get_cor())
 
-    for i in range(max_cor + 2):
+    cor_limite = max_cor + 1
+    if num_coloridos == 0: cor_limite = max_cor
+    for i in range(cor_limite + 1):
         if i == num_vertices: break
         if i in blocked_colors:
             continue
@@ -223,6 +223,10 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_
         v.set_cor(None)
     
     return (num_cores_encontrado, coloracao_encontrada)
+
+def busca_BTSL(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_coloridos: int = 0, num_cores_encontrado=None, coloracao_encontrada=None):
+    grafo.sort_vertices_grau()
+    return busca_backtraking(grafo, cores, num_coloridos, num_cores_encontrado, coloracao_encontrada)
 
 def busca_BTDSATUR(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_coloridos: int = 0, num_cores_encontrado=None, coloracao_encontrada=None):
     num_vertices = len(grafo.get_vertices())
@@ -257,7 +261,9 @@ def busca_BTDSATUR(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_col
         if u.get_cor() != None:
             blocked_colors.append(u.get_cor())
 
-    for i in range(max_cor + 2):
+    cor_limite = max_cor + 1
+    if num_coloridos == 0: cor_limite = max_cor
+    for i in range(cor_limite + 1):
         if i == num_vertices: break
         if i in blocked_colors:
             continue
@@ -362,3 +368,4 @@ if __name__ == '__main__':
     print(grafo)
 
     print(busca_BTDSATUR(grafo))
+    print(busca_backtraking(grafo.reset_coloracao_vertices()))
