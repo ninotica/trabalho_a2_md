@@ -2,7 +2,8 @@
 import pandas as pd
 from itertools import combinations
 import os
-import unicodedata
+import algoritmos
+import copy
 
 class Disciplina:
     disciplinas = []
@@ -79,6 +80,9 @@ class Disciplina:
 
     def __repr__(self):
         return f"{self.nome}"
+    
+    def to_Vertice(self):
+        return algoritmos.Vertice(self.nome)
 
 class Restricoes:
     def __init__(self, lista_disciplinas: list[Disciplina], lista_restricoes_adicionais):
@@ -106,6 +110,24 @@ class Restricoes:
     
     def restricoes(self):
         return self.restricoes_basicas() | self.restrições_adicionais()
+    
+    def to_Vertice(self):
+        restricoes = self.restricoes()
+        vertices = [v.to_Vertice() for v in Disciplina.disciplinas_prova()]
+        restricoes_vert = []
+        for (v, u) in restricoes:
+            for vertice in vertices:
+                if v.nome == vertice.get_label():
+                    v = vertice
+                    break
+            for vertice in vertices:
+                if u.nome == vertice.get_label():
+                    u = vertice
+                    break
+            
+            restricoes_vert.append((v, u))
+
+        return restricoes_vert
 
 class Grafo:
     def __init__(self, vertices, arestas):
@@ -249,8 +271,35 @@ alunos_puxando = { # set com listas de todas as disciplinas que o aluno com sche
 restricoes = Restricoes(Disciplina.disciplinas_prova(), alunos_puxando)
 grafo = Grafo(Disciplina.disciplinas_prova(), restricoes.restricoes())
 drafo = grafo.dict_format()
-# if __name__ == "__main__":
-#     for d in drafo:
-#         print("*", d, ":", drafo[d])
+for d in drafo:
+    print("*", d, ":", drafo[d])
 
-print(Disciplina.blocos_validos())
+grafo_ruda = algoritmos.Grafo([v.to_Vertice() for v in Disciplina.disciplinas_prova()], restricoes.to_Vertice())
+print(grafo_ruda)
+
+num_vertices = len(grafo_ruda.get_vertices())
+cores = {i: [] for i in range(num_vertices)}
+
+print('\nBusca com um algorítmo guloso sequencial:')
+num_cores, coloracao = algoritmos.busca_gulosa_seq(grafo_ruda, copy.deepcopy(cores))
+coloracao = algoritmos.limpar_coloracao(coloracao)
+print(f'Número de cores necessário: {num_cores}')
+print(f'Coloração:\n{coloracao}')
+for v in grafo_ruda.get_vertices():
+    v.set_cor(None)
+
+print('\nBusca com um algorítmo DSATUR:')
+num_cores, coloracao = algoritmos.busca_DSATUR(grafo_ruda, copy.deepcopy(cores))
+coloracao = algoritmos.limpar_coloracao(coloracao)
+print(f'Número de cores necessário: {num_cores}')
+print(f'Coloração:\n{coloracao}')
+for v in grafo_ruda.get_vertices():
+    v.set_cor(None)
+
+print('\nBusca com um algorítmo de backtracking:')
+num_cores, coloracao = algoritmos.busca_backtraking(grafo_ruda, copy.deepcopy(cores), 0, num_cores, algoritmos.encher_coloracao(coloracao, len(grafo_ruda.get_vertices())))
+coloracao = algoritmos.limpar_coloracao(coloracao)
+print(f'Número de cores necessário: {num_cores}')
+print(f'Coloração:\n{coloracao}')
+for v in grafo_ruda.get_vertices():
+    v.set_cor(None)
