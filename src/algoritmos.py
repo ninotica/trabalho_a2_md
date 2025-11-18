@@ -169,9 +169,15 @@ class Grafo():
                     self.vertices[i] = u
                     self.vertices[j] = v
 
-    def reset_coloracao_vertices(self):
+    def reset_coloracao_vertices(self, coloracao_base):
+        # coloração base deve ser um dicionário do tipo {Vertice: Cor}, cor no formato int, só precisa ter os vértices coloridos
         for v in self.vertices:
-            v.set_cor(None)
+            try:
+                cor = coloracao_base[v]
+            except KeyError:
+                cor = None
+            finally:
+                v.set_cor(cor)
             v.set_saturacao(0)
         
         return self
