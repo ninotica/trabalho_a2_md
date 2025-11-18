@@ -184,7 +184,7 @@ def busca_backtraking(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_
     if num_cores_encontrado == None: num_cores_encontrado = num_vertices + 1
     if cores == None: cores = {i: [] for i in range(len(grafo.get_vertices()))}
     
-    max_cor = 0
+    max_cor = -1
     for cor in [vert.get_cor() for vert in grafo.get_vertices()]:
         if cor != None:
             if cor > max_cor: 
@@ -237,7 +237,7 @@ def busca_BTDSATUR(grafo: Grafo, cores: dict[int: list[Vertice]] = None, num_col
     if num_cores_encontrado == None: num_cores_encontrado = num_vertices + 1
     if cores == None: cores = {i: [] for i in range(len(grafo.get_vertices()))}
     
-    max_cor = 0
+    max_cor = -1
     for v in grafo.get_vertices():
         cor = v.get_cor()
         if cor != None:
