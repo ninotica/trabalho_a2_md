@@ -45,13 +45,33 @@ class Disciplina:
         return {(dia, materia.horario) for materia in self.disciplinas_prova() for dia in materia.dias}
     
     @classmethod
-    def blocos_validos(self):
+    def blocos_iniciais(self):
         set_blocos = set([])
         # aqui definimos conjuntos de matérias que acontecem nos mesmos dias e horários, como ponto de partida
         for dia_e_horario in Disciplina.set_dias_horarios():
             bloco = set([materia for materia in self.disciplinas_prova() if dia_e_horario[0] in materia.dias and dia_e_horario[1] == materia.horario])
             set_blocos.add(tuple(bloco))
         return [t1 for t1 in set_blocos if not any(set(t1).issubset(set(t2)) for t2 in set_blocos if t1 != t2)]
+
+    @classmethod
+    def blocos_validos(self):
+        vistos = set()
+        nova_lista = []
+
+        for tupla in self.blocos_iniciais():
+            elementos_unicos = []
+            for item in tupla:
+                # Se o item ainda não foi visto, adicionamos à lista temporária
+                if item not in vistos:
+                    elementos_unicos.append(item)
+                    vistos.add(item)
+            
+            # Opcional: Só adiciona a tupla se ela não estiver vazia
+            # Se quiser manter tuplas vazias (ex: ()), remova o 'if elements_unicos'
+            if elementos_unicos: 
+                nova_lista.append(tuple(elementos_unicos))
+
+        return nova_lista
 
     @classmethod
     def disciplinas_prova(self):
@@ -110,6 +130,15 @@ class Grafo:
         for i in cores:
             calendario[i] = [d for d in self.elementos if d.cor == i]
             return calendario
+    
+    def coloracao_inicial(self, blocos_iniciais):
+        i = 0
+        coloracao = {}
+        for bloco in blocos_iniciais:
+            for materia in bloco:
+                coloracao[materia] = i
+            i+1
+        return coloracao
 
 def limpar_nome(texto):
     # Normaliza, remove acentos (encode ascii), volta pra string e troca espaço por _
