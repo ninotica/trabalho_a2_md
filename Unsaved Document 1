@@ -1,0 +1,22 @@
+    def restricoes_basicas(self):
+        """define um dicionário com as restricoes de disciplinas que não podem ocorrer num mesmo dia"""
+        restricoes = {}
+        for i in self.lista_disciplinas:
+            restricoes[i] = set([])
+            for j in self.lista_disciplinas:
+                if j != i:
+                    mesmo_periodo = (set(i.periodos) & set(j.periodos))
+                    mesmo_curso = (set(i.curso) & set(j.curso))
+                    if mesmo_periodo and mesmo_curso:
+                        restricoes[i].add(j)
+        return restricoes
+
+    def restrições_adicionais(self, schedules_atípicos):
+        '''adiciona restrições necessárias para cada aluno puxando disciplinas atípicas'''
+        grafo = Disciplina.grafo_restricoes_basicas()
+        for schedule in schedules_atípicos:
+            for i in schedule:
+                for j in schedule:
+                    if i in self.lista_disciplinas and j in self.lista_disciplinas and i != j:
+                        grafo[i].add(j)
+        return grafo
