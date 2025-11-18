@@ -34,6 +34,7 @@ class Disciplina:
         self.periodos = periodos
         self.curso = curso
         self.horario = horario
+        self.dias = dias
         self.tem_prova = tem_prova
         self.eh_dificil = False
         self.cor = pre_requerimento_data
@@ -41,8 +42,41 @@ class Disciplina:
         Disciplina.disciplinas.append(self)
 
     @classmethod
+    def set_dias_horarios(self):
+        return {(dia, materia.horario) for materia in self.disciplinas_prova() for dia in materia.dias}
+    
+    @classmethod
+    def blocos_iniciais(self):
+        set_blocos = set([])
+        # aqui definimos conjuntos de matérias que acontecem nos mesmos dias e horários, como ponto de partida
+        for dia_e_horario in Disciplina.set_dias_horarios():
+            bloco = set([materia for materia in self.disciplinas_prova() if dia_e_horario[0] in materia.dias and dia_e_horario[1] == materia.horario])
+            set_blocos.add(tuple(bloco))
+        return [t1 for t1 in set_blocos if not any(set(t1).issubset(set(t2)) for t2 in set_blocos if t1 != t2)]
+
+    @classmethod
+    def blocos_validos(self):
+        vistos = set()
+        nova_lista = []
+
+        for tupla in self.blocos_iniciais():
+            elementos_unicos = []
+            for item in tupla:
+                # Se o item ainda não foi visto, adicionamos à lista temporária
+                if item not in vistos:
+                    elementos_unicos.append(item)
+                    vistos.add(item)
+            
+            # Opcional: Só adiciona a tupla se ela não estiver vazia
+            # Se quiser manter tuplas vazias (ex: ()), remova o 'if elements_unicos'
+            if elementos_unicos: 
+                nova_lista.append(tuple(elementos_unicos))
+
+        return nova_lista
+
+    @classmethod
     def disciplinas_prova(self):
-        return [d for d in Disciplina.disciplinas if d.tem_prova]
+        return [d for d in self.disciplinas if d.tem_prova]
 
     def __repr__(self):
         return f"{self.nome}"
@@ -110,16 +144,30 @@ class Grafo:
         return dicionario
     
     def coloracao(self):
-        return {i:i.cor for i in self.elementos}
+        return {i:i.cor for i in self.elementos if i.cor is not None}
     
     def calendario(self):
-        cores = {i.cor for i in self.elementos if i.cor is not None}
+        cores = self.coloracao()
         calendario = {}
         for i in cores:
             calendario[i] = [d for d in self.elementos if d.cor == i]
             return calendario
     
+    def coloracao_inicial(self, blocos_iniciais):
+        i = 0
+        coloracao = {}
+        for bloco in blocos_iniciais:
+            for materia in bloco:
+                coloracao[materia] = i
+            i+1
+        return coloracao
+
+def limpar_nome(texto):
+    # Normaliza, remove acentos (encode ascii), volta pra string e troca espaço por _
+    return unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8').lower().replace(' ', '_')
+    
 def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
+
     """
     Carrega as disciplinas de um arquivo .csv ou .xlsx e as cria
     no escopo global usando a coluna 'nome_variavel'.
@@ -152,7 +200,7 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
         horario = str(row['horario'])
         nome_variavel = str(row['nome_variavel']).strip()
         tem_prova = bool(row['tem_prova'])
-        
+
         if pd.notna(row['data_prof_pediu']):
             data_prof_pediu = int(row['data_prof_pediu'])
         else:
@@ -202,6 +250,7 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
         globals()[nome_variavel] = nova_disciplina
 
     print(f"Carregadas {len(Disciplina.disciplinas)} disciplinas.")
+
 ################################################################################
 # Setup Inicial
 ################################################################################
@@ -210,17 +259,11 @@ carregar_disciplinas_do_arquivo(file_path)
 
 nr_dias = 7
 
-solucoes_desejadas = 5
-
-requerimentos_profs = {AR: 1, AL : 2} #chave é a disciplina, valor é o dia. 
-
 alunos_puxando = { # set com listas de todas as disciplinas que o aluno com schedule incomum está puxando
 (AL, AR, MD, LP, CVV, AEDV, EMD),
 (AL, AR, MD, LP, CVV, MFF),
 (AC, AL, MD, LP, CVV, AEDV),
 }
-
-materias_dificeis = {MD, AL}
 
 ################################################################################
 # Criação do Grafo
