@@ -1,4 +1,4 @@
-from Disciplinas import grafo, nr_dias, requerimentos_profs, Disciplina, AEDV, OCD, MD, AL
+from Disciplinas import grafo, Disciplina, AEDV, OCD, MD, AL, Grafo
 
 ################################################################################
 # Setup Algoritmo Guloso
@@ -13,12 +13,7 @@ def pode_colorir(disciplina: Disciplina, dia: int, grafo: dict, coloracao: dict)
             return False
     return True
 
-def requerimentos_razoaveis(requerimento: dict, grafo:dict) -> bool:
-    for materia in requerimento:
-        for vizinho in grafo[materia]:
-            if vizinho in requerimento and requerimento[vizinho] == requerimento[materia]:
-                return False
-    return True
+
 
 def ordem_de_ruindade(grafo, calendario):
     ruindade = 0
@@ -72,7 +67,7 @@ def coloracao_gulosa(grafo, cores):
             print("Coloração Falhou!")
             return 0
         vertice.cor = pd
-        coloracao = grafo.coloracao()
+        coloracao = grafo.salvar_coloracao()
         #reseta as cores iniciais
     for d in grafo.elementos:
         d.cor = coloracao_inicial[d]
