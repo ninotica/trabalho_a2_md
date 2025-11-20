@@ -109,14 +109,9 @@ class Grafo():
 
                 for aresta in arestas:
                     if (v, u) == aresta or (u, v) == aresta:
-                        if not u in self.arestas[v.get_label()]:
+                        if not (u in self.arestas[v.get_label()] or v in self.arestas[u.get_label()]):
                             self.arestas[v.get_label()].append(u)
                             self.arestas[u.get_label()].append(v)
-
-                            v.set_grau(v.get_grau() + 1)
-                            u.set_grau(u.get_grau() + 1)
-                            v.add_vizinho(u)
-                            u.add_vizinho(v)
 
                             aresta[0].set_grau(aresta[0].get_grau() + 1)
                             aresta[1].set_grau(aresta[1].get_grau() + 1)
@@ -349,9 +344,8 @@ def busca_DSATUR(grafo: Grafo, cores: dict[int: list[Vertice]] = None):
 
     qtd_cor = 0
     for cor in cores.values():
-        if len(cor) == 0:
-            break
-        qtd_cor += 1
+        if len(cor) > 0:
+            qtd_cor += 1
 
     return (qtd_cor, cores)
     
@@ -371,7 +365,7 @@ def encher_coloracao(coloracao, tam_grafo):
 
 if __name__ == '__main__':
 
-    grafo = Grafo.gerar_grafo_generico(50, 25)
+    grafo = Grafo.gerar_grafo_generico(100, 25)
 
     print(grafo)
 
