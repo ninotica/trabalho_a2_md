@@ -42,46 +42,38 @@ def testa_velocidade_coloracoes(funcs: list, min_vertices=1, max_vertices=25, re
     
     return df
 
-def testa_precisao_coloracoes(funcs: list, max_vertices=25):
-    # TODO: consertar isso aqui
-    dados = ['1_10%']
+def testa_precisao_coloracoes(funcs: list, min_vertice=1, max_vertice=25, probabilidades=[10, 25, 50, 75], filepath: Path= None):
+    dados = [min_vertice]
     cols = ['tipo_grafo']
-    grafo = algoritmos.Grafo.gerar_grafo_generico(1, 10)
-    for func in funcs:
-        num_cores, _ = func(grafo)
-        dados.append(num_cores)
-        cols.append(func.__name__)
-        grafo.reset_coloracao_vertices()
+    for i in probabilidades:
+        for func in funcs:
+            grafo = algoritmos.Grafo.gerar_grafo_generico(min_vertice, i)
+            num_cromatico, _ = func(grafo)
+            dados.append(num_cromatico)
+            cols.append(func.__name__ + '_' + str(i) + '%')
 
     df = pd.DataFrame([pd.Series(dados, index=cols)], columns=cols, index=[1])
-    for i in [25, 50, 75]:
-        dados = ['1_' + str(i) + '%']
-        grafo = algoritmos.Grafo.gerar_grafo_generico(1, i)
-        for func in funcs:
-            num_cores, _ = func(grafo)
-            dados.append(num_cores)
-            grafo.reset_coloracao_vertices()
-        df = pd.concat([df, pd.DataFrame([pd.Series(dados, index=cols)], columns=cols, index=[1])], ignore_index=True)
 
-    for i in range(2, max_vertices + 1):
-        for j in [10, 25, 50, 75]:
-            dados = [str(i) + '_' + str(j) + '%']
-            grafo = algoritmos.Grafo.gerar_grafo_generico(i, j)
+    for i in range(min_vertice + 1, max_vertice + 1):
+        dados = [i]
+        for j in probabilidades:
             for func in funcs:
-                num_cores, _ = func(grafo)
-                dados.append(num_cores)
-                grafo.reset_coloracao_vertices()
-            df = pd.concat([df, pd.DataFrame([pd.Series(dados, index=cols)], columns=cols, index=[1])], ignore_index=True)
+                grafo = algoritmos.Grafo.gerar_grafo_generico(i, j)
+                num_cromatico, _ = func(grafo)
+                dados.append(num_cromatico)
+                print(f'grafo com {i} vértices e {j}% de arestas avaliado para {func.__name__}')
+        df = pd.concat([df, pd.DataFrame([pd.Series(dados, index=cols)], columns=cols, index=[1])], ignore_index=True)
+        if filepath != None: df.to_csv(filepath, index=False)
     
     return df
 
+
 if __name__ == '__main__':
     funcs = [algoritmos.busca_backtraking, algoritmos.busca_BTSL, algoritmos.busca_BTDSATUR]
-    # df = testa_velocidade_coloracoes(funcs, 1, 15, 100, filepath=Path('data\BT-geral.csv'))
+    # df = testa_velocidade_coloracoes(funcs, 1, 15, 100, filepath=Path('trabalho_a2_md\data\BT-geral.csv'))
     # df = testa_velocidade_coloracoes(funcs, 1, 15, 100)
-    df = pd.read_csv(Path('data\BT-geral.csv'))
+    df = pd.read_csv(Path('trabalho_a2_md\data\BT-geral.csv'))
 
-    print(df)
     fig1 = plt.figure(figsize=(16, 9))
     gs = fig1.add_gridspec(2, 3, hspace=0.35, wspace=0.25)
 
@@ -128,10 +120,10 @@ if __name__ == '__main__':
         ax.legend()
 
     funcs.remove(algoritmos.busca_backtraking)
-    # filepath = Path('data\BTSL-BTDSATUR.csv')
+    # filepath = Path('trabalho_a2_md\data\BTSL-BTDSATUR.csv')
     # df = testa_velocidade_coloracoes(funcs, 40, 100, 100, filepath=filepath)
     # df = testa_velocidade_coloracoes(funcs, 1, 30, 100)
-    df = pd.read_csv(Path('data\BTSL-BTDSATUR.csv'))
+    df = pd.read_csv(Path('trabalho_a2_md\data\BTSL-BTDSATUR.csv'))
 
     fig2 = plt.figure(figsize=(16, 9))
     gs = fig2.add_gridspec(2, 3, hspace=0.35, wspace=0.25)
@@ -172,6 +164,36 @@ if __name__ == '__main__':
     #     ax.plot(df['tipo_grafo'], df['busca_BTDSATUR_average'], lw=1.0, color='b', label='BTDSATUR-Average', linestyle='--', alpha=0.4)
         ax.legend()
 
+
+    funcs = [algoritmos.busca_gulosa_seq, algoritmos.busca_DSATUR, algoritmos.busca_BTDSATUR]
+    filepath = Path('trabalho_a2_md\data\precisao-geral.csv')
+    # df = testa_precisao_coloracoes(funcs, max_vertice=50, filepath=filepath)
+    df = pd.read_csv(filepath)
+
+    fig3 = plt.figure(figsize=(16,9))
+    gs = fig3.add_gridspec(2, 2, hspace=0.35, wspace=0.25)
+
+    ax13 = fig3.add_subplot(gs[0,0])
+    ax13.plot(df['tipo_grafo'], df['busca_gulosa_seq_10%'], lw=1.0, color='r', label='Smallest Last')
+    ax13.plot(df['tipo_grafo'], df['busca_DSATUR_10%'], lw=1.0, color='g', label='DSATUR')
+    ax13.plot(df['tipo_grafo'], df['busca_BTDSATUR_10%'], lw=1.0, color='b', label='BTDSATUR')
+
+    ax14 = fig3.add_subplot(gs[0,1])
+    ax14.plot(df['tipo_grafo'], df['busca_gulosa_seq_25%'], lw=1.0, color='r', label='Smallest Last')
+    ax14.plot(df['tipo_grafo'], df['busca_DSATUR_25%'], lw=1.0, color='g', label='DSATUR')
+    ax14.plot(df['tipo_grafo'], df['busca_BTDSATUR_25%'], lw=1.0, color='b', label='BTDSATUR')
+
+    ax15 = fig3.add_subplot(gs[1,0])
+    ax15.plot(df['tipo_grafo'], df['busca_gulosa_seq_50%'], lw=1.0, color='r', label='Smallest Last')
+    ax15.plot(df['tipo_grafo'], df['busca_DSATUR_50%'], lw=1.0, color='g', label='DSATUR')
+    ax15.plot(df['tipo_grafo'], df['busca_BTDSATUR_50%'], lw=1.0, color='b', label='BTDSATUR')
+
+    ax16 = fig3.add_subplot(gs[1,1])
+    ax16.plot(df['tipo_grafo'], df['busca_gulosa_seq_75%'], lw=1.0, color='r', label='Smallest Last')
+    ax16.plot(df['tipo_grafo'], df['busca_DSATUR_75%'], lw=1.0, color='g', label='DSATUR')
+    ax16.plot(df['tipo_grafo'], df['busca_BTDSATUR_75%'], lw=1.0, color='b', label='BTDSATUR')
+    
     fig1.suptitle('Tempo Médio de Execução Dado o Número de Vértices e Densidade de Arestas')
     fig2.suptitle('Tempo Médio de Execução Dado o Número de Vértices e Densidade de Arestas')
+    fig3.suptitle('Comparação do número cromático encontrado pelos algorítmos')
     plt.show()

@@ -170,13 +170,13 @@ class Grafo():
                     self.vertices[j] = v
 
     def reset_coloracao_vertices(self, coloracao_base):
-        # coloração base deve ser um dicionário do tipo {Vertice: Cor}, cor no formato int, só precisa ter os vértices coloridos
+        # coloração base deve ser um dicionário do tipo {Vertice.label: Cor}, cor no formato int, só precisa ter os vértices coloridos
         for v in self.vertices:
             try:
-                cor = coloracao_base[v]
+                cor = coloracao_base[v.get_label()]
+                v.set_cor(cor)
             except KeyError:
                 cor = None
-            finally:
                 v.set_cor(cor)
             v.set_saturacao(0)
         
@@ -377,9 +377,14 @@ def encher_coloracao(coloracao, tam_grafo):
 
 if __name__ == '__main__':
 
-    grafo = Grafo.gerar_grafo_generico(75, 25)
+    grafo = Grafo.gerar_grafo_generico(50, 25)
 
     print(grafo)
 
     print(busca_BTDSATUR(grafo))
+
+    grafo.reset_coloracao_vertices({1: 1, 2: 2})
+
+    for v in grafo.get_vertices():
+        print(v.get_cor())
     # print(busca_backtraking(grafo.reset_coloracao_vertices()))
