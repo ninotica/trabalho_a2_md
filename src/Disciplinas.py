@@ -2,8 +2,8 @@
 import pandas as pd
 from itertools import combinations
 import os
-import algoritmos
 import copy
+import unicodedata
 
 class Disciplina:
     disciplinas = []
@@ -38,8 +38,16 @@ class Disciplina:
         self.tem_prova = tem_prova
         self.eh_dificil = False
         self.cor = pre_requerimento_data
+        self.saturacao = 0
 
         Disciplina.disciplinas.append(self)
+
+    def get_cor(self):
+        return self.cor
+    
+    def set_cor(self, cor):
+        self.cor = cor
+
 
     @classmethod
     def set_dias_horarios(self):
@@ -80,9 +88,6 @@ class Disciplina:
 
     def __repr__(self):
         return f"{self.nome}"
-    
-    def to_Vertice(self):
-        return algoritmos.Vertice(self.nome)
 
 class Restricoes:
     def __init__(self, lista_disciplinas: list[Disciplina], lista_restricoes_adicionais):
@@ -143,6 +148,9 @@ class Grafo:
                     dicionario[i].add(j)
         return dicionario
     
+    def get_vertices(self):
+        return self.elementos
+
     def coloracao(self):
         return {i:i.cor for i in self.elementos if i.cor is not None}
     
@@ -161,6 +169,31 @@ class Grafo:
                 coloracao[materia] = i
             i+1
         return coloracao
+    
+    def sort_vertices_grau(self):
+        for i in range(len(self.elementos)):
+            for j in range(i + 1, len(self.elementos)):
+                v = self.elementos[i]
+                u = self.elementos[j]
+                if self.get_grau(u) > self.get_grau(v):
+                    temp = v
+                    self.elementos[i] = u
+                    self.elementos[j] = temp
+    
+    def get_grau(self, vertice):
+        return len(self.dict_format()[vertice])
+    
+    def get_vizinhos(self, vertice):
+        if vertice not in self.get_vertices():
+            return []
+        return self.dict_format()[vertice]
+    
+    def get_saturacao(self, vertice):
+        saturacao = 0
+        for vizinho in self.get_vizinhos(vertice):
+            if vizinho.cor is not None:
+                saturacao +=1
+        return saturacao
 
 def limpar_nome(texto):
     # Normaliza, remove acentos (encode ascii), volta pra string e troca espaço por _
@@ -274,32 +307,3 @@ drafo = grafo.dict_format()
 for d in drafo:
     print("*", d, ":", drafo[d])
 
-grafo_ruda = algoritmos.Grafo([v.to_Vertice() for v in Disciplina.disciplinas_prova()], restricoes.to_Vertice())
-print(grafo_ruda)
-
-num_vertices = len(grafo_ruda.get_vertices())
-cores = {i: [] for i in range(num_vertices)}
-
-print('\nBusca com um algorítmo guloso sequencial:')
-num_cores, coloracao = algoritmos.busca_gulosa_seq(grafo_ruda, copy.deepcopy(cores))
-coloracao = algoritmos.limpar_coloracao(coloracao)
-print(f'Número de cores necessário: {num_cores}')
-print(f'Coloração:\n{coloracao}')
-for v in grafo_ruda.get_vertices():
-    v.set_cor(None)
-
-print('\nBusca com um algorítmo DSATUR:')
-num_cores, coloracao = algoritmos.busca_DSATUR(grafo_ruda, copy.deepcopy(cores))
-coloracao = algoritmos.limpar_coloracao(coloracao)
-print(f'Número de cores necessário: {num_cores}')
-print(f'Coloração:\n{coloracao}')
-for v in grafo_ruda.get_vertices():
-    v.set_cor(None)
-
-print('\nBusca com um algorítmo de backtracking:')
-num_cores, coloracao = algoritmos.busca_backtraking(grafo_ruda, copy.deepcopy(cores), 0, num_cores, algoritmos.encher_coloracao(coloracao, len(grafo_ruda.get_vertices())))
-coloracao = algoritmos.limpar_coloracao(coloracao)
-print(f'Número de cores necessário: {num_cores}')
-print(f'Coloração:\n{coloracao}')
-for v in grafo_ruda.get_vertices():
-    v.set_cor(None)
