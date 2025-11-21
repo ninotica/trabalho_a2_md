@@ -577,6 +577,9 @@ def carregar_relacao_alunos(caminho_arquivo: str):
     
     if set(nome_disciplina.keys()) != set(disciplinas_alunos.keys()):
         print("CUIDADO: as disciplinas podem não ter sido identificadas corretamente")
+    
+    if len(nome_disciplina) < len(Disciplina.disciplinas):
+        print(f"CUIDADO: as disciplinas {set(Disciplina.disciplinas) - set(nome_disciplina.values())} não foram carregadas corretamente")
 
     return relacao_disciplinas
 
