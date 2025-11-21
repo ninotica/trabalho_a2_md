@@ -5,6 +5,7 @@ import os
 import copy
 import unicodedata
 import random
+from difflib import SequenceMatcher
 
 class Disciplina:
     disciplinas = []
@@ -92,9 +93,17 @@ class Disciplina:
 
     def __repr__(self):
         return f"{self.nome}"
+    
+    def encontrar_equivalente(self, lista: list):
+        for i in lista:
+            if i.nome == self.nome:
+                return i
+        return False
+
+
 
 class Restricoes:
-    def __init__(self, lista_disciplinas: list[Disciplina], lista_restricoes_adicionais):
+    def __init__(self, lista_disciplinas: list[Disciplina], lista_restricoes_adicionais: list[tuple]):
         self.lista_disciplinas = lista_disciplinas
         self.lista_restricoes = lista_restricoes_adicionais
  
@@ -113,7 +122,9 @@ class Restricoes:
         restricoes_adicionais = set()
         for schedule in self.lista_restricoes:
             for i, j in combinations(schedule, 2):
-                if i in self.lista_disciplinas and j in self.lista_disciplinas:
+                i = i.encontrar_equivalente(self.lista_disciplinas)
+                j = j.encontrar_equivalente(self.lista_disciplinas)
+                if i and j and i.nome != j.nome:
                     restricoes_adicionais.add((i, j))
         return restricoes_adicionais
     
@@ -121,8 +132,8 @@ class Restricoes:
         return self.restricoes_basicas() | self.restrições_adicionais()
 
 class Grafo:
-    def __init__(self, vertices: Disciplina, arestas: Restricoes):
-        self.elementos = vertices
+    def __init__(self, arestas: Restricoes):
+        self.elementos = arestas.lista_disciplinas
         self.restricoes = arestas.restricoes()
         self.restricoes_basicas = arestas.restricoes_basicas()
     
@@ -152,11 +163,23 @@ class Grafo:
         return {i:i.cor for i in self.elementos if i.cor is not None}
     
     def restaurar_coloracao(self, coloracao:dict[Disciplina: int]):
-        for v in self.get_vertices():
-            if v in coloracao:
+        for v in coloracao:
+            if v in self.get_vertices():
                 v.set_cor(coloracao[v])
             else: v.set_cor(None)
         return self
+    
+    def restaurar_calendario(self, calendario:dict[int: list[Disciplina]]):
+        for cor in calendario.keys():
+            for c in calendario[cor]:
+                for v in self.disciplinas_mutaveis:
+                    if v.nome == c.nome:
+                        v.set_cor(cor)
+            
+    
+    def votar_coloracao_inicial(self):
+        for v in self.disciplinas_mutaveis():
+            v.set_cor(None)
 
     def calendario(self):
         cores = self.salvar_coloracao()
@@ -220,6 +243,12 @@ class Grafo:
                         nr_loops += 1
         return self.calendario()
     
+    def requerimentos_razoaveis(self) -> bool:
+        for materia in self.disciplinas_dia_fixo():
+            for vizinho in self.get_vizinhos(materia):
+                if vizinho in self.disciplinas_dia_fixo() and vizinho.get_cor() == materia.get_cor():
+                    return False
+        return True
 
     def coloracao_invalida(self) -> bool:
         duplas_invalidas = []
@@ -228,7 +257,7 @@ class Grafo:
                 if vizinho.get_cor() != None and vizinho.get_cor() == materia.get_cor():
                     duplas_invalidas.append((vizinho, materia))
         return duplas_invalidas
-
+    
     def sort_vertices_grau(self):
         for i in range(len(self.elementos)):
             for j in range(i + 1, len(self.elementos)):
@@ -278,10 +307,10 @@ class Grafo:
         vertice.set_cor(cor_atual)
         return k >= j
 
-    def MRNA_ruindade(self, max_iteracoes_inocuas = 100, nr_dias_max = 7):
-        contador = 0
+    def busca_local_ruindade(self, max_iteracoes_inocuas = 100, nr_dias_max = 7):
+        contador = 0 #conta a quantidade de iterações sem melhora
         while self.ordem_ruindade() > 0:
-            pares = self.pares_ruins()
+            pares = self.pares_ruins() #lista de pares de materias, onde uma é difícil e a outra antecede
             if not pares:
                 break
             random.shuffle(pares)
@@ -315,10 +344,103 @@ class Grafo:
                     break
             if not melhoria_global:
                 contador += 1
-            
+            #se ultrapassa um certo numero de iterações sem melhorar, acaba o loop
             if contador > max_iteracoes_inocuas:
                 break            
         return self.calendario(), self.ordem_ruindade()     
+
+    def busca_BTDSATUR(self, cores: dict[int: list[Disciplina]] = {}, num_coloridos: int = 0, num_cores_encontrado=None, coloracao_encontrada={}):
+        num_vertices = len(self.get_vertices())
+        if num_coloridos == 0:
+            for v in self.get_vertices():
+                if not v.pode_mudar: 
+                    num_coloridos += 1
+            if coloracao_encontrada == {} and num_coloridos != 0: 
+                coloracao_encontrada = {i: [] for i in range(len(self.get_vertices()))}
+                for cor, vertices in self.calendario().items():
+                    for u in vertices:
+                        if u.pode_mudar or (u.cor == cor):    
+                            coloracao_encontrada[cor].append(u)
+                        else: 
+                            coloracao_encontrada = {}
+
+                coloracao_num_vertices = 0
+                for cor, vertices in coloracao_encontrada.items():
+                    if len(vertices) > 0:
+                        coloracao_num_vertices += len(vertices)
+                        if num_cores_encontrado == None or cor > num_cores_encontrado: 
+                            num_cores_encontrado = cor
+
+                if coloracao_num_vertices != num_vertices: 
+                    coloracao_encontrada = {}
+                    num_cores_encontrado = num_vertices + 1
+                else:
+                    num_cores_encontrado += 1
+            
+            if cores == {} and num_coloridos != 0: 
+                cores = {i: [] for i in range(len(self.get_vertices()))}
+                for u in self.get_vertices():
+                    if not u.pode_mudar and not u in cores[cor]:
+                        cores[u.cor].append(u)
+
+        if num_cores_encontrado == None: num_cores_encontrado = num_vertices + 1
+        if cores == {}: cores = {i: [] for i in range(len(self.get_vertices()))}
+        
+        max_cor = -1
+        for v in self.get_vertices():
+            cor = v.get_cor()
+            if cor != None:
+                if cor > max_cor:
+                    if cor + 1 >= num_cores_encontrado:
+                        return (num_cores_encontrado, coloracao_encontrada)
+                    max_cor = cor
+
+        if num_coloridos == num_vertices:
+            return (max_cor + 1, cores) # já se sabe que max_cor + 1 < num_cores_encontrado devido ao loop anterior
+
+        v = None
+        for u in self.get_vertices():
+            if u.get_cor() == None and u.pode_mudar:
+                if v == None:
+                    v = u
+                elif self.get_saturacao(u) > self.get_saturacao(v):
+                    v = u
+                elif self.get_saturacao(u) == self.get_saturacao(v) and self.get_grau(u) > self.get_grau(v):
+                    v = u
+            
+        blocked_colors = []
+
+        for u in self.get_vizinhos(v):
+            if u.get_cor() != None:
+                blocked_colors.append(u.get_cor())
+
+        # sozinho = False
+        for i in range(max_cor + 2):
+            if i >= num_vertices: break
+            # if sozinho and cores[i] == []:
+            #     continue
+            if i in blocked_colors:
+                continue
+            v.set_cor(i)
+            cores[i].append(v)
+            num_cores, coloracao = self.busca_BTDSATUR(cores, num_coloridos + 1, num_cores_encontrado, coloracao_encontrada)
+            if num_cores < num_cores_encontrado:
+                num_cores_encontrado = num_cores
+                coloracao_encontrada = copy.deepcopy(coloracao)
+            cores[i].pop()
+            v.set_cor(None)
+
+            disc_copiadas = [d for l in coloracao.values() for d in l ]
+
+            for d in grafo.get_vertices():
+                for d2 in disc_copiadas:
+                    if d.nome == d2.nome:
+                        d.set_cor(d2.cor)
+
+
+            # if sozinho == False and cores[i] == []:
+            #     sozinho = True
+        return (num_cores_encontrado, coloracao_encontrada)
 
     def __str__(self):
         string = ""
@@ -331,6 +453,12 @@ def limpar_nome(texto):
     # Normaliza, remove acentos (encode ascii), volta pra string e troca espaço por _
     return unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8').lower().replace(' ', '_')
 
+def nomes_parecidos_o_bastante(a: str, b: str, limiar=0.8):
+    a = limpar_nome(a)
+    b = limpar_nome(b)
+    similaridade = SequenceMatcher(None, a, b).ratio()
+    return similaridade > limiar
+
 def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
 
     """
@@ -338,7 +466,7 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
     no escopo global usando a coluna 'nome_variavel'.
     
     O arquivo deve ter as colunas: 
-    'nome', 'horario', 'dias', 'periodos', 'cursos', 'nome_variavel'
+    'nome', 'horario', 'dias', 'periodos', 'cursos', 'nome_variavel', 'tem_prova', 'eh_dificil', e 'data_prof_pediu'
     """
     try:
         if caminho_arquivo.endswith('.csv'):
@@ -357,7 +485,7 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
     # Limpa a lista de disciplinas existente para evitar duplicatas
     Disciplina.disciplinas = []
     
-    print(f"Carregando disciplinas de '{caminho_arquivo}'...")
+    print(f"Carregando disciplinas de '{caminho_arquivo}'")
 
     for _, row in df.iterrows():
         # Trata valores NaN (células vazias) do Excel
@@ -418,35 +546,81 @@ def carregar_disciplinas_do_arquivo(caminho_arquivo: str):
 
     print(f"Carregadas {len(Disciplina.disciplinas)} disciplinas.")
 
+def carregar_relacao_alunos(caminho_arquivo: str):
+    """
+    Lê um arquivo Excel com múltiplas abas e retorna um dicionário.
+    Chave: Nome da aba (Disciplina)
+    Valor: Lista de matrículas (primeira coluna da aba)
+    """
+    # sheet_name=None faz o pandas ler TODAS as abas e retornar um dicionário
+    # onde a chave é o nome da aba e o valor é o DataFrame
+    dados_brutos = pd.read_excel(caminho_arquivo, sheet_name=None)
+
+    disciplinas_alunos = {}
+
+    for disciplina, df in dados_brutos.items():
+        # Verifica se a aba não está vazia
+        if not df.empty:
+            lista_matriculas = df.iloc[:, 0].dropna().tolist()
+            
+            disciplinas_alunos[disciplina] = lista_matriculas
+    
+    nome_disciplina = {}
+
+    relacao_disciplinas = {}
+
+    for nome in disciplinas_alunos.keys():
+        for disciplina in Disciplina.disciplinas:
+            if nomes_parecidos_o_bastante(nome, disciplina.nome):
+                relacao_disciplinas[disciplina] = disciplinas_alunos[nome]
+                nome_disciplina[nome] = disciplina
+    
+    if set(nome_disciplina.keys()) != set(disciplinas_alunos.keys()):
+        print("CUIDADO: as disciplinas podem não ter sido identificadas corretamente")
+
+    return relacao_disciplinas
+
+def schedules_from_relacao_alunos(relacao_alunos):
+    schedules = {}
+    for materia in relacao_alunos.keys():
+        for matricula in relacao_alunos[materia]:
+            if matricula in schedules:
+                schedules[matricula].append(materia)
+            else:
+                schedules[matricula] = [materia]
+    for matricula in schedules:
+        schedules[matricula] = tuple(schedules[matricula])
+    return set(schedules.values())
 ################################################################################
 # Setup Inicial
 ################################################################################
-file_path = os.path.join('data', 'disciplinas_gemini.csv')
-carregar_disciplinas_do_arquivo(file_path)
 
 nr_dias = 7
 
+file_path = os.path.join('data', 'disciplinas.csv')
+carregar_disciplinas_do_arquivo(file_path)
 
-#TODO: Implementar importação de arquivos do Excel da Claudinha
-alunos_puxando = { # set com listas de todas as disciplinas que o aluno com schedule incomum está puxando
-(AL, AR, MD, LP, CVV, AEDV, EMD),
-(AL, AR, MD, LP, CVV, MFF),
-(AC, AL, MD, LP, CVV, AEDV),
-}
+chamada_path = os.path.join('data', 'EMAp_20252.xlsx')
+chamadas = carregar_relacao_alunos(chamada_path)
+schedules = list(schedules_from_relacao_alunos(chamadas))
 
-################################################################################
-# Criação do Grafo
-################################################################################
-restricoes = Restricoes(Disciplina.disciplinas_prova(), alunos_puxando)
-grafo = Grafo(Disciplina.disciplinas_prova(), restricoes)
+materias = Disciplina.disciplinas_prova()
+restricoes = Restricoes(materias, schedules)
+grafo = Grafo(restricoes)
 
 ################################################################################
 # Criação do calendário
 ################################################################################
-grafo.colorir_blocos_iniciais(Disciplina.blocos_validos())
-
-print(grafo.reduzir_calendario())
-
-print(grafo.MRNA_ruindade())
-
-
+if True:
+    if not grafo.requerimentos_razoaveis():
+        print("Os requerimentos feitos pelos professores são incoerentes, não é possível construir um calendário de provas")
+    else:
+        grafo.busca_BTDSATUR()
+        _, ordem_ruindade = grafo.busca_local_ruindade(nr_dias_max=nr_dias)
+        
+        calendario = grafo.calendario()
+        for i in calendario:
+            print(f"Dia {i+1}:")
+            print("Provas:", calendario[i])
+        
+        print(ordem_ruindade)

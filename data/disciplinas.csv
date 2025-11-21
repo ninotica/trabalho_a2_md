@@ -9,12 +9,12 @@ MD;Matemática Discreta;11h10;ter,qui;2;CD,MAp;;1;1
 PAA;Projeto e Análise de Algoritmos;7h30;seg,qua;4;CD;;1;
 CR;Ciência de Redes;9h20;seg,qua;4,6;CD;;1;
 MI;Modelagem Informacional;11h10;seg,qua;4;CD;;1;
-IE;Inferência Estatística;9h20;ter,sex;4;CD,MAp;;1;
+IE;Inferência Estatística;9h20;ter,sex;4;CD,MAp;;1;1
 OCD;Otimização para Ciência de Dados;11h10;ter,qui;4;CD;;1;
 HM;História da Matemática;11h10;seg,qua;;MAp;;1;
-AR;Análise na Reta;14h20;seg,qua,sex;4;MAp;0;1;
+AR;Análise na Reta;14h20;seg,qua,sex;4;MAp;0;1;1
 AC;Algebra e Criptografia;7h30;ter,qui;4,8;MAp;;1;
-ES;Engenharia de Software;7h30;ter,qui;6;CD;;1;
+ES;Engenharia de Software;7h30;ter,qui;6;CD;;1;1
 AP;Aprendizado Profundo;9h20;ter,qui;6;CD;;1;
 ST;Séries Temporais;11h10;ter,qui;6;CD;;1;
 PE;Processos Estocásticos;9h20;seg,qua;6;MAp;;1;
@@ -22,3 +22,4 @@ EDP;Equações Diferenciais Parciais;9h20;ter,qui;6;MAp;;1;
 IAN;Introdução à Análise Numérica;11h10;ter,qui;6;MAp;;1;
 EMD;Ética na Manipulação de Dados;7h30;ter,qui;8;CD;;1;
 OC;Otimização Contínua;11h10;seg,qua;8;MAp;;1;
+PFVP;Provas Formais e Verificação de Programas;9h20;sex;;MAp;;0;
