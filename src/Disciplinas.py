@@ -594,10 +594,12 @@ def schedules_from_relacao_alunos(relacao_alunos):
     for matricula in schedules:
         schedules[matricula] = tuple(schedules[matricula])
     return set(schedules.values())
+
+
+################################################################################
+# Driver Code
 ################################################################################
 # Setup Inicial
-################################################################################
-
 nr_dias = 7
 
 file_path = os.path.join('data', 'disciplinas.csv')
@@ -611,19 +613,20 @@ materias = Disciplina.disciplinas_prova()
 restricoes = Restricoes(materias, schedules)
 grafo = Grafo(restricoes)
 
-################################################################################
 # Criação do calendário
-################################################################################
-if True:
-    if not grafo.requerimentos_razoaveis():
-        print("Os requerimentos feitos pelos professores são incoerentes, não é possível construir um calendário de provas")
-    else:
-        grafo.busca_BTDSATUR()
-        _, ordem_ruindade = grafo.busca_local_ruindade(nr_dias_max=nr_dias)
-        
-        calendario = grafo.calendario()
-        for i in calendario:
-            print(f"Dia {i+1}:")
-            print("Provas:", calendario[i])
-        
-        print(ordem_ruindade)
+
+if not grafo.requerimentos_razoaveis():
+    print("Os requerimentos feitos pelos professores são incoerentes, não é possível construir um calendário de provas")
+else:
+    grafo.busca_BTDSATUR()
+    _, ordem_ruindade = grafo.busca_local_ruindade(nr_dias_max=nr_dias)
+    
+    calendario = grafo.calendario()
+
+# Exibição do calendário na tela
+
+    for i in calendario:
+        print(f"Dia {i+1}:")
+        print("Provas:", calendario[i])
+    
+    print("Número de materias difíceis com prova no dia anterior: ", ordem_ruindade)
